@@ -44,17 +44,14 @@ class ProductionConfig(Config):
     # Production specific settings
     DEBUG = False
     
-    # Fix for Render PostgreSQL URL format
-    @property
-    def SQLALCHEMY_DATABASE_URI(self):
-        uri = os.environ.get('DATABASE_URL')
-        if uri and uri.startswith('postgres://'):
-            uri = uri.replace('postgres://', 'postgresql://', 1)
-        return uri
-    
     @staticmethod
     def init_app(app):
         Config.init_app(app)
+        
+        # Fix for Render PostgreSQL URL format
+        db_url = app.config.get('SQLALCHEMY_DATABASE_URI')
+        if db_url and db_url.startswith('postgres://'):
+            app.config['SQLALCHEMY_DATABASE_URI'] = db_url.replace('postgres://', 'postgresql://', 1)
         
         # Log configuration info
         import logging

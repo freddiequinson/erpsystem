@@ -17,23 +17,16 @@ def create_app(config_name='default'):
     # Log the configuration being used
     logger.info(f"Creating app with configuration: {config_name}")
     
-    # Handle Render's PostgreSQL URL format
-    if config_name == 'production' and os.environ.get('DATABASE_URL'):
-        db_url = os.environ.get('DATABASE_URL')
-        if db_url.startswith('postgres://'):
-            db_url = db_url.replace('postgres://', 'postgresql://', 1)
-            os.environ['DATABASE_URL'] = db_url
-            logger.info("Converted DATABASE_URL from postgres:// to postgresql://")
-    
     # Load configuration
     app.config.from_object(config[config_name])
     config[config_name].init_app(app)
     
-    # Log database URL (without sensitive info)
+    # Log database connection info (safely)
     db_url = app.config.get('SQLALCHEMY_DATABASE_URI', '')
     if db_url:
-        masked_url = db_url.split('@')[-1] if '@' in db_url else db_url
-        logger.info(f"Using database: {masked_url}")
+        # Only log the type of database, not the full connection string for security
+        db_type = db_url.split('://')[0] if '://' in db_url else 'unknown'
+        logger.info(f"Using database type: {db_type}")
     
     # Initialize extensions with app
     db.init_app(app)
