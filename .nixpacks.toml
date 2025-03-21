@@ -1,8 +1,22 @@
 [phases.setup]
-nixPkgs = ["python39", "gcc", "python39Packages.setuptools", "python39Packages.pip", "python39Packages.wheel"]
+nixPkgs = [
+  "python39",
+  "python39Packages.pip",
+  "python39Packages.setuptools",
+  "python39Packages.wheel",
+  "gcc",
+  "postgresql"
+]
 
 [phases.install]
-cmds = ["python -m pip install --upgrade pip setuptools wheel", "pip install -r requirements.txt"]
+cmds = [
+  "python -m pip install --upgrade pip setuptools wheel",
+  "pip install gunicorn psycopg2-binary",
+  "pip install -r requirements-railway.txt"
+]
+
+[phases.build]
+cmds = ["python -m flask db upgrade || true"]
 
 [start]
 cmd = "gunicorn 'app:create_app(\"production\")' --bind 0.0.0.0:$PORT"
