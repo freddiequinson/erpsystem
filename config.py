@@ -43,13 +43,20 @@ class TestingConfig(Config):
 class ProductionConfig(Config):
     # Production specific settings
     DEBUG = False
-    # Use PostgreSQL in production with Railway's environment variables
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    
+    # Fix for Render PostgreSQL URL format
+    @property
+    def SQLALCHEMY_DATABASE_URI(self):
+        uri = os.environ.get('DATABASE_URL')
+        if uri and uri.startswith('postgres://'):
+            uri = uri.replace('postgres://', 'postgresql://', 1)
+        return uri
     
     @staticmethod
     def init_app(app):
         Config.init_app(app)
-        # Log to stderr
+        
+        # Log configuration info
         import logging
         from logging import StreamHandler
         file_handler = StreamHandler()
