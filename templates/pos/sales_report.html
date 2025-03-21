@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Daily Sales Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #e6e6e6;
+            padding: 15px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .company-info {
+            float: left;
+            width: 50%;
+        }
+        .company-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .company-location {
+            font-size: 11px;
+            color: #666;
+        }
+        .report-title {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .session-info {
+            text-align: center;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        .date-info {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            border: 1px solid #999;
+            padding: 5px 10px;
+            font-size: 11px;
+        }
+        .section {
+            margin-bottom: 20px;
+        }
+        .section-header {
+            background-color: #e6e6e6;
+            padding: 5px 10px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 5px 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            font-weight: bold;
+        }
+        .amount {
+            text-align: right;
+        }
+        .total-row {
+            font-weight: bold;
+        }
+        .category {
+            font-weight: bold;
+        }
+        .product {
+            padding-left: 20px;
+        }
+        .clearfix:after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+        .footer {
+            margin-top: 30px;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+            font-size: 10px;
+            color: #666;
+            text-align: center;
+        }
+        .print-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            background-color: #4a6cf7;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .print-button:hover {
+            background-color: #3a5ce6;
+        }
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 10px 15px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            text-decoration: none;
+        }
+        .back-button:hover {
+            background-color: #5a6268;
+        }
+        
+        @media print {
+            .print-button, .back-button {
+                display: none;
+            }
+            body {
+                font-size: 10px;
+            }
+            .container {
+                padding: 0;
+                max-width: 100%;
+            }
+            .header {
+                background-color: #f5f5f5 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .section-header {
+                background-color: #f5f5f5 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            @page {
+                size: A4;
+                margin: 1cm;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% if not print_mode %}
+    <a href="{{ url_for('pos.sessions') }}" class="back-button">
+        <i class="fas fa-arrow-left"></i> Back to Sessions
+    </a>
+    <button class="print-button" onclick="window.print()">
+        <i class="fas fa-print"></i> Print Report
+    </button>
+    {% endif %}
+    
+    <div class="container">
+        <div class="header clearfix">
+            <div class="company-info">
+                <div class="company-name">POS System</div>
+                <div class="company-location">Ghana</div>
+            </div>
+            <div class="report-title">Daily Sales Report</div>
+            <div class="session-info">Session ID: {{ session.id }} - {{ session.name }}</div>
+            <div class="session-info">Sales Worker: {{ sales_worker.username }}</div>
+            <div class="session-info">Opening Time: {{ session.start_time.strftime('%Y-%m-%d %H:%M') }}</div>
+            {% if session.end_time %}
+            <div class="session-info">Closing Time: {{ session.end_time.strftime('%Y-%m-%d %H:%M') }}</div>
+            {% endif %}
+            <div class="date-info">As of {{ report_date.strftime('%d/%m/%Y') }}</div>
+        </div>
+
+        <!-- Sales Section -->
+        <div class="section">
+            <div class="section-header">Sales</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 60%;">Product</th>
+                        <th style="width: 20%;" class="amount">Qty</th>
+                        <th style="width: 20%;" class="amount">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for category, products in sales_by_category.items() %}
+                        <tr class="category">
+                            <td>{{ category }}</td>
+                            <td class="amount">{{ category_totals[category]['qty'] }}</td>
+                            <td class="amount">{{ "%.2f"|format(category_totals[category]['amount']) }}₵</td>
+                        </tr>
+                        {% for product in products %}
+                            <tr class="product">
+                                <td>{{ product.name }}</td>
+                                <td class="amount">{{ product.qty }}</td>
+                                <td class="amount">{{ "%.2f"|format(product.amount) }}₵</td>
+                            </tr>
+                        {% endfor %}
+                    {% endfor %}
+                    <tr class="total-row">
+                        <td>Total</td>
+                        <td class="amount">{{ total_qty }}</td>
+                        <td class="amount">{{ "%.2f"|format(total_amount) }}₵</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Taxes Section -->
+        <div class="section">
+            <div class="section-header">Taxes on sales</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 60%;">Tax</th>
+                        <th style="width: 20%;" class="amount">Amount</th>
+                        <th style="width: 20%;" class="amount">Base</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ tax_rate }}%</td>
+                        <td class="amount">{{ "%.2f"|format(tax_amount) }}₵</td>
+                        <td class="amount">{{ "%.2f"|format(total_amount) }}₵</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td>Total</td>
+                        <td class="amount">{{ "%.2f"|format(tax_amount) }}₵</td>
+                        <td class="amount">{{ "%.2f"|format(total_amount) }}₵</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Payments Section -->
+        <div class="section">
+            <div class="section-header">Payments</div>
+            <table>
+                <tbody>
+                    {% for payment_method, amount in payments.items() %}
+                    <tr>
+                        <td style="width: 60%;">{{ payment_method }}</td>
+                        <td style="width: 40%;" class="amount">{{ "%.2f"|format(amount) }}₵</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Discounts Section -->
+        <div class="section">
+            <div class="section-header">Discounts</div>
+            <p>Number of discounts: {{ discounts_count }}</p>
+            <p>Amount of discounts: {{ "%.2f"|format(discounts_amount) }}₵</p>
+        </div>
+
+        <!-- Session Control Section -->
+        <div class="section">
+            <div class="section-header">Session Control</div>
+            <p>Total: {{ "%.2f"|format(total_with_tax) }}₵</p>
+            <p>Number of transactions: {{ transactions_count }}</p>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 60%;">Name</th>
+                        <th style="width: 40%;" class="amount">Expected</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Cash {{ session.name }}</td>
+                        <td class="amount">{{ "%.2f"|format(total_with_tax) }}₵</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <p>Opening of session note: Opening details:</p>
+            <p>1 x {{ "%.2f"|format(session.opening_balance) }}₵</p>
+            <p>Total: {{ "%.2f"|format(session.opening_balance) }}₵</p>
+        </div>
+
+        <div class="footer">
+            Generated on {{ report_date.strftime('%Y-%m-%d %H:%M:%S') }}
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+
+{% block title %}Receipt {{ receipt.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Receipt: {{ receipt.name }}</h1>
+            <p class="text-muted">Date: {{ receipt.receipt_date.strftime('%Y-%m-%d') }}</p>
+        </div>
+        <div class="col-auto">
+            <div class="btn-group">
+                <a href="{{ url_for('purchase.view_order', order_id=receipt.purchase_order_id) }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Order
+                </a>
+                <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fas fa-ellipsis-v"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-print me-2"></i> Print</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-file-pdf me-2"></i> Export as PDF</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Receipt Details Card -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Receipt Details</h5>
+                    <span class="badge {% if receipt.state == 'draft' %}bg-secondary{% elif receipt.state == 'done' %}bg-success{% elif receipt.state == 'cancelled' %}bg-danger{% endif %} fs-6">
+                        {{ receipt.state|capitalize }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Purchase Order</h6>
+                            <p class="mb-1"><strong>{{ receipt.purchase_order.name }}</strong></p>
+                            <p class="mb-1">Supplier: {{ receipt.purchase_order.supplier.name }}</p>
+                            <p class="mb-1">Order Date: {{ receipt.purchase_order.order_date.strftime('%Y-%m-%d') }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Destination</h6>
+                            <p class="mb-1">Main Warehouse</p>
+                            <p class="mb-1">Stock Location</p>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="text-center">Quantity Received</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for line in receipt.lines %}
+                                <tr>
+                                    <td>
+                                        <div>{{ line.product.name }}</div>
+                                        <small class="text-muted">{{ line.product.sku }}</small>
+                                    </td>
+                                    <td class="text-center">{{ line.quantity }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    {% if receipt.notes %}
+                    <div class="mt-4">
+                        <h6 class="text-muted">Notes</h6>
+                        <p class="mb-0">{{ receipt.notes }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Stock Movements Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Stock Movements</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>From</th>
+                                    <th>To</th>
+                                    <th class="text-center">Quantity</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for line in receipt.lines %}
+                                <tr>
+                                    <td>{{ line.product.name }}</td>
+                                    <td>Supplier Location</td>
+                                    <td>Stock</td>
+                                    <td class="text-center">{{ line.quantity }}</td>
+                                    <td><span class="badge bg-success">Done</span></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Receipt Info Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Receipt Information</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>Receipt Date</span>
+                            <span>{{ receipt.receipt_date.strftime('%Y-%m-%d') }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>Created By</span>
+                            <span>{{ receipt.user.username if receipt.user else 'System' }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>Created On</span>
+                            <span>{{ receipt.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

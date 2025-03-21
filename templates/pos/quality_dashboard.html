@@ -1,0 +1,520 @@
+{% extends 'base.html' %}
+
+{% block title %}Quality Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Quality Dashboard</h1>
+            <p class="text-muted">Overview of product returns quality and inventory impact</p>
+        </div>
+        <div class="col-auto">
+            <div class="btn-group">
+                <a href="{{ url_for('pos.quality_checks') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-clipboard-check me-2"></i> Quality Checks
+                </a>
+                <a href="{{ url_for('pos.returns') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-exchange-alt me-2"></i> Returns
+                </a>
+                {% if pending_count > 0 %}
+                <a href="{{ url_for('pos.sequential_quality_checks') }}" class="btn btn-success">
+                    <i class="fas fa-tasks me-2"></i> Process Returns ({{ pending_count }})
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-light h-100">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Total Returns</h6>
+                    <h2 class="mb-0">{{ total_returns }}</h2>
+                    <small class="text-muted">Last 30 days</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success bg-opacity-10 h-100">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Resellable Items</h6>
+                    <h2 class="mb-0">{{ resellable_count }}</h2>
+                    <small class="text-muted">{{ '{:.1f}'.format(resellable_percentage) }}% of total returns</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger bg-opacity-10 h-100">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Defective Items</h6>
+                    <h2 class="mb-0">{{ defective_count }}</h2>
+                    <small class="text-muted">{{ '{:.1f}'.format(defective_percentage) }}% of total returns</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning bg-opacity-10 h-100">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Pending Checks</h6>
+                    <h2 class="mb-0">{{ pending_count }}</h2>
+                    <small class="text-muted">Require quality evaluation</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional KPI Cards for Returns Processing -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card bg-info bg-opacity-10 h-100">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Returns Awaiting Validation</h6>
+                    <h2 class="mb-0">{{ unvalidated_returns_count }}</h2>
+                    <small class="text-muted">Returns in draft state that need to be validated</small>
+                    {% if unvalidated_returns_count > 0 %}
+                    <div class="mt-3">
+                        <a href="{{ url_for('pos.returns') }}?state=draft" class="btn btn-sm btn-info">
+                            <i class="fas fa-check-circle me-2"></i> View & Validate
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card bg-warning bg-opacity-10 h-100">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Items Awaiting Quality Checks</h6>
+                    <h2 class="mb-0">{{ pending_count }}</h2>
+                    <small class="text-muted">Return items that need quality inspection</small>
+                    {% if pending_count > 0 %}
+                    <div class="mt-3">
+                        <a href="{{ url_for('pos.sequential_quality_checks') }}" class="btn btn-sm btn-warning">
+                            <i class="fas fa-tasks me-2"></i> Process Quality Checks
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <!-- Quality Status Chart -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Quality Status Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="qualityStatusChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Disposition Chart -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Disposition Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="dispositionChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <!-- Top Products with Quality Issues -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Top Products with Quality Issues</h5>
+                </div>
+                <div class="card-body">
+                    {% if top_defective_products %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Defect Count</th>
+                                    <th>Defect Rate</th>
+                                    <th>Primary Issue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in top_defective_products %}
+                                <tr>
+                                    <td>{{ product.name }}</td>
+                                    <td>{{ product.defect_count }}</td>
+                                    <td>
+                                        <div class="progress" style="height: 10px;">
+                                            <div class="progress-bar bg-danger" role="progressbar" 
+                                                 style="width: {{ product.defect_rate }}%; min-width: 2px;" 
+                                                 aria-valuenow="{{ product.defect_rate }}" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100">
+                                            </div>
+                                        </div>
+                                        <small>{{ '{:.1f}'.format(product.defect_rate) }}%</small>
+                                    </td>
+                                    <td>{{ product.primary_issue }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-check-circle fa-3x text-muted mb-3"></i>
+                        <p>No quality issues detected</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Quality Checks -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Quality Checks</h5>
+                    <a href="{{ url_for('pos.quality_checks') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_checks %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Product</th>
+                                    <th>Result</th>
+                                    <th>Disposition</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for check in recent_checks %}
+                                <tr>
+                                    <td>{{ check.check_date.strftime('%d/%m/%Y') }}</td>
+                                    <td>
+                                        {% if check.return_line and check.return_line.product %}
+                                        {{ check.return_line.product.name }}
+                                        {% else %}
+                                        Unknown Product
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if check.quality_state == 'pass' %}bg-success{% elif check.quality_state == 'not_defective' %}bg-info{% elif check.quality_state == 'minor_defect' %}bg-warning{% elif check.quality_state == 'major_defect' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                            {{ check.quality_state|replace('_', ' ')|title }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if check.disposition == 'stock' %}bg-success{% elif check.disposition == 'scrap' %}bg-danger{% elif check.disposition == 'repair' %}bg-warning{% elif check.disposition == 'vendor' %}bg-info{% elif check.disposition == 'discount_sale' %}bg-primary{% else %}bg-secondary{% endif %}">
+                                            {{ check.disposition|replace('_', ' ')|title }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-clipboard-check fa-3x text-muted mb-3"></i>
+                        <p>No recent quality checks</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <!-- Pending Quality Checks Section -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Pending Quality Checks</h5>
+                    {% if pending_returns %}
+                    <a href="{{ url_for('pos.sequential_quality_checks') }}" class="btn btn-sm btn-success">
+                        <i class="fas fa-tasks me-2"></i> Process All Sequentially
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if pending_returns %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Return Ref</th>
+                                    <th>Product</th>
+                                    <th>Quantity</th>
+                                    <th>Return Date</th>
+                                    <th>Return Reason</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for line in pending_returns %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ url_for('pos.return_detail', return_id=line.return_id) }}">
+                                            {{ line.pos_return.name if line.pos_return else 'Unknown' }}
+                                        </a>
+                                    </td>
+                                    <td>{{ line.product.name if line.product else 'Unknown Product' }}</td>
+                                    <td>{{ line.quantity }}</td>
+                                    <td>{{ line.pos_return.return_date.strftime('%d/%m/%Y') if line.pos_return else 'Unknown' }}</td>
+                                    <td>{{ line.return_reason }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('pos.new_quality_check', return_line_id=line.id) }}" class="btn btn-primary">
+                                                <i class="fas fa-clipboard-check me-1"></i> Check Quality
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                        <p>No pending quality checks</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <!-- Quality Trends -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Quality Trends (Last 30 Days)</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="qualityTrendsChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Inventory Impact -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Inventory Impact</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-6">
+                            <div class="border rounded p-3 text-center h-100">
+                                <h6 class="text-muted">Returned to Stock</h6>
+                                <h3 class="text-success mb-0">{{ returned_to_stock_count }}</h3>
+                                <small class="text-muted">Items</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border rounded p-3 text-center h-100">
+                                <h6 class="text-muted">Scrapped</h6>
+                                <h3 class="text-danger mb-0">{{ scrapped_count }}</h3>
+                                <small class="text-muted">Items</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border rounded p-3 text-center h-100">
+                                <h6 class="text-muted">Sent for Repair</h6>
+                                <h3 class="text-warning mb-0">{{ repair_count }}</h3>
+                                <small class="text-muted">Items</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border rounded p-3 text-center h-100">
+                                <h6 class="text-muted">Returned to Vendor</h6>
+                                <h3 class="text-info mb-0">{{ vendor_return_count }}</h3>
+                                <small class="text-muted">Items</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Financial Impact -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Financial Impact</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-6">
+                            <div class="border rounded p-3 text-center h-100">
+                                <h6 class="text-muted">Total Return Value</h6>
+                                <h3 class="mb-0">₵{{ '{:,.2f}'.format(total_return_value) }}</h3>
+                                <small class="text-muted">Last 30 days</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border rounded p-3 text-center h-100">
+                                <h6 class="text-muted">Recovered Value</h6>
+                                <h3 class="text-success mb-0">₵{{ '{:,.2f}'.format(recovered_value) }}</h3>
+                                <small class="text-muted">{{ '{:.1f}'.format(recovery_rate) }}% recovery rate</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border rounded p-3 text-center h-100">
+                                <h6 class="text-muted">Loss from Defects</h6>
+                                <h3 class="text-danger mb-0">₵{{ '{:,.2f}'.format(defect_loss) }}</h3>
+                                <small class="text-muted">{{ '{:.1f}'.format(defect_loss_rate) }}% of returns</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border rounded p-3 text-center h-100">
+                                <h6 class="text-muted">Avg. Return Value</h6>
+                                <h3 class="mb-0">₵{{ '{:,.2f}'.format(avg_return_value) }}</h3>
+                                <small class="text-muted">Per item</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Quality Status Chart
+        const qualityStatusCtx = document.getElementById('qualityStatusChart').getContext('2d');
+        const qualityStatusChart = new Chart(qualityStatusCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Resellable', 'Minor Defects', 'Major Defects', 'Pending'],
+                datasets: [{
+                    data: [
+                        {{ resellable_count }}, 
+                        {{ minor_defect_count }}, 
+                        {{ major_defect_count }}, 
+                        {{ pending_count }}
+                    ],
+                    backgroundColor: [
+                        'rgba(40, 167, 69, 0.7)',  // success
+                        'rgba(255, 193, 7, 0.7)',  // warning
+                        'rgba(220, 53, 69, 0.7)',  // danger
+                        'rgba(108, 117, 125, 0.7)' // secondary
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'right'
+                    }
+                }
+            }
+        });
+        
+        // Disposition Chart
+        const dispositionCtx = document.getElementById('dispositionChart').getContext('2d');
+        const dispositionChart = new Chart(dispositionCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Return to Stock', 'Scrap/Dispose', 'Send for Repair', 'Return to Vendor', 'Discount Sale'],
+                datasets: [{
+                    data: [
+                        {{ returned_to_stock_count }}, 
+                        {{ scrapped_count }}, 
+                        {{ repair_count }}, 
+                        {{ vendor_return_count }},
+                        {{ discount_sale_count }}
+                    ],
+                    backgroundColor: [
+                        'rgba(40, 167, 69, 0.7)',   // success
+                        'rgba(220, 53, 69, 0.7)',   // danger
+                        'rgba(255, 193, 7, 0.7)',   // warning
+                        'rgba(23, 162, 184, 0.7)',  // info
+                        'rgba(13, 110, 253, 0.7)'   // primary
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'right'
+                    }
+                }
+            }
+        });
+        
+        // Quality Trends Chart
+        const trendsCtx = document.getElementById('qualityTrendsChart').getContext('2d');
+        const trendsChart = new Chart(trendsCtx, {
+            type: 'line',
+            data: {
+                labels: {{ trend_dates|tojson }},
+                datasets: [
+                    {
+                        label: 'Resellable',
+                        data: {{ resellable_trend|tojson }},
+                        borderColor: 'rgba(40, 167, 69, 1)',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Defective',
+                        data: {{ defective_trend|tojson }},
+                        borderColor: 'rgba(220, 53, 69, 1)',
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Items'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

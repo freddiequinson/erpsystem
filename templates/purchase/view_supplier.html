@@ -1,0 +1,331 @@
+{% extends 'base.html' %}
+
+{% block title %}Supplier: {{ supplier.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>{{ supplier.name }}</h1>
+            <p class="text-muted">Supplier Details</p>
+        </div>
+        <div class="col-auto">
+            <div class="btn-group">
+                <a href="{{ url_for('purchase.suppliers') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Suppliers
+                </a>
+                <a href="{{ url_for('purchase.edit_supplier', supplier_id=supplier.id) }}" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+                <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fas fa-ellipsis-v"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-file-pdf me-2"></i> Export as PDF</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-envelope me-2"></i> Send Email</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <button type="button" class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                            <i class="fas fa-trash me-2"></i> Delete
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <!-- Supplier Info Card -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Supplier Information</h5>
+                    <span class="badge {% if supplier.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                        {% if supplier.is_active %}Active{% else %}Inactive{% endif %}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6 class="text-muted">Contact Information</h6>
+                        {% if supplier.contact_name %}
+                        <p class="mb-1"><strong>Contact Person:</strong> {{ supplier.contact_name }}</p>
+                        {% endif %}
+                        {% if supplier.email %}
+                        <p class="mb-1"><strong>Email:</strong> <a href="mailto:{{ supplier.email }}">{{ supplier.email }}</a></p>
+                        {% endif %}
+                        {% if supplier.phone %}
+                        <p class="mb-1"><strong>Phone:</strong> <a href="tel:{{ supplier.phone }}">{{ supplier.phone }}</a></p>
+                        {% endif %}
+                        {% if supplier.website %}
+                        <p class="mb-1"><strong>Website:</strong> <a href="{{ supplier.website }}" target="_blank">{{ supplier.website }}</a></p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-muted">Address</h6>
+                        <address>
+                            {% if supplier.address %}{{ supplier.address }}<br>{% endif %}
+                            {% if supplier.city or supplier.state or supplier.zip_code %}
+                                {{ supplier.city }}{% if supplier.city and supplier.state %}, {% endif %}
+                                {{ supplier.state }} {{ supplier.zip_code }}<br>
+                            {% endif %}
+                            {% if supplier.country %}{{ supplier.country }}{% endif %}
+                        </address>
+                    </div>
+                    
+                    {% if supplier.tax_id %}
+                    <div class="mb-3">
+                        <h6 class="text-muted">Tax Information</h6>
+                        <p class="mb-1"><strong>Tax ID:</strong> {{ supplier.tax_id }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if supplier.notes %}
+                    <div class="mb-3">
+                        <h6 class="text-muted">Notes</h6>
+                        <p class="mb-0">{{ supplier.notes }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Statistics Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <h3>{{ supplier.purchase_orders.count() }}</h3>
+                            <p class="text-muted mb-0">Orders</p>
+                        </div>
+                        <div class="col-4">
+                            <h3>{{ supplier.purchase_orders.filter_by(state='received').count() }}</h3>
+                            <p class="text-muted mb-0">Received</p>
+                        </div>
+                        <div class="col-4">
+                            <h3>{{ supplier.purchase_orders.filter_by(state='confirmed').count() }}</h3>
+                            <p class="text-muted mb-0">Pending</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <!-- Purchase Orders Card -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Purchase Orders</h5>
+                    <a href="{{ url_for('purchase.new_order') }}?supplier_id={{ supplier.id }}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus"></i> New Order
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Order #</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th>Total</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if supplier.purchase_orders.count() > 0 %}
+                                    {% for order in supplier.purchase_orders %}
+                                    <tr>
+                                        <td>{{ order.name }}</td>
+                                        <td>{{ order.order_date.strftime('%Y-%m-%d') }}</td>
+                                        <td>
+                                            <span class="badge {% if order.state == 'draft' %}bg-secondary{% elif order.state == 'sent' %}bg-primary{% elif order.state == 'confirmed' %}bg-info{% elif order.state == 'received' %}bg-success{% elif order.state == 'cancelled' %}bg-danger{% endif %}">
+                                                {{ order.state|capitalize }}
+                                            </span>
+                                        </td>
+                                        <td>₵{{ "%.2f"|format(order.total_amount + order.tax_amount) }}</td>
+                                        <td>
+                                            <a href="{{ url_for('purchase.view_order', order_id=order.id) }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="5" class="text-center py-3">No purchase orders found</td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    {% if supplier.purchase_orders.count() > 5 %}
+                    <div class="text-center mt-3">
+                        <a href="{{ url_for('purchase.orders') }}?supplier_id={{ supplier.id }}" class="btn btn-sm btn-outline-secondary">
+                            View All Orders
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Purchase History Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Purchase History</h5>
+                </div>
+                <div class="card-body">
+                    <div id="purchase-history-chart" style="height: 300px;"></div>
+                </div>
+            </div>
+            
+            <!-- Products Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Products Purchased</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="text-center">Quantity</th>
+                                    <th class="text-end">Last Price</th>
+                                    <th class="text-end">Average Price</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% set products = {} %}
+                                {% for order in supplier.purchase_orders %}
+                                    {% for line in order.lines %}
+                                        {% if line.product_id in products %}
+                                            {% set _ = products.update({
+                                                line.product_id: {
+                                                    'name': line.product.name,
+                                                    'quantity': products[line.product_id]['quantity'] + line.quantity,
+                                                    'last_price': line.unit_price,
+                                                    'total_price': products[line.product_id]['total_price'] + (line.quantity * line.unit_price),
+                                                    'count': products[line.product_id]['count'] + 1
+                                                }
+                                            }) %}
+                                        {% else %}
+                                            {% set _ = products.update({
+                                                line.product_id: {
+                                                    'name': line.product.name,
+                                                    'quantity': line.quantity,
+                                                    'last_price': line.unit_price,
+                                                    'total_price': line.quantity * line.unit_price,
+                                                    'count': 1
+                                                }
+                                            }) %}
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endfor %}
+                                
+                                {% for product_id, data in products.items() %}
+                                <tr>
+                                    <td>{{ data['name'] }}</td>
+                                    <td class="text-center">{{ data['quantity'] }}</td>
+                                    <td class="text-end">₵{{ "%.2f"|format(data['last_price']) }}</td>
+                                    <td class="text-end">₵{{ "%.2f"|format(data['total_price'] / data['quantity']) }}</td>
+                                </tr>
+                                {% endfor %}
+                                
+                                {% if products|length == 0 %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-3">No products purchased</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete supplier <strong>{{ supplier.name }}</strong>?</p>
+                {% if supplier.purchase_orders.count() > 0 %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i> This supplier has {{ supplier.purchase_orders.count() }} purchase orders. Deleting this supplier may affect related records.
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('purchase.delete_supplier', supplier_id=supplier.id) }}" method="post">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Sample data for the purchase history chart
+        // In a real application, this data would come from the backend
+        var options = {
+            series: [{
+                name: 'Purchase Amount',
+                data: [30, 40, 35, 50, 49, 60, 70, 91, 125]
+            }],
+            chart: {
+                type: 'bar',
+                height: 300,
+                toolbar: {
+                    show: false
+                }
+            },
+            plotOptions: {
+                bar: {
+                    horizontal: false,
+                    columnWidth: '55%',
+                    endingShape: 'rounded'
+                },
+            },
+            dataLabels: {
+                enabled: false
+            },
+            xaxis: {
+                categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'],
+            },
+            yaxis: {
+                title: {
+                    text: 'Amount (₵)'
+                }
+            },
+            fill: {
+                opacity: 1
+            },
+            tooltip: {
+                y: {
+                    formatter: function (val) {
+                        return "₵ " + val
+                    }
+                }
+            }
+        };
+
+        var chart = new ApexCharts(document.querySelector("#purchase-history-chart"), options);
+        chart.render();
+    });
+</script>
+{% endblock %}

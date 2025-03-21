@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}POS Login{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pos_odoo_style.css') }}">
+<style>
+    body {
+        background-color: #222222;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-screen">
+    <div class="login-box">
+        <div class="login-logo">
+            <i class="fas fa-cash-register"></i>
+        </div>
+        <h2 class="login-title">Unlock Register</h2>
+        
+        <form method="POST" action="{{ url_for('pos.login') }}">
+            <div class="form-group">
+                <input type="password" class="pin-input" id="pin" name="pin" placeholder="Enter your PIN" required>
+            </div>
+            
+            <div class="numpad">
+                <div class="numpad-key" data-key="1">1</div>
+                <div class="numpad-key" data-key="2">2</div>
+                <div class="numpad-key" data-key="3">3</div>
+                <div class="numpad-key function" data-key="clear">C</div>
+                
+                <div class="numpad-key" data-key="4">4</div>
+                <div class="numpad-key" data-key="5">5</div>
+                <div class="numpad-key" data-key="6">6</div>
+                <div class="numpad-key function" data-key="backspace"><i class="fas fa-backspace"></i></div>
+                
+                <div class="numpad-key" data-key="7">7</div>
+                <div class="numpad-key" data-key="8">8</div>
+                <div class="numpad-key" data-key="9">9</div>
+                <div class="numpad-key function" data-key="submit"><i class="fas fa-check"></i></div>
+                
+                <div class="numpad-key" data-key="0">0</div>
+                <div class="numpad-key" data-key=".">.</div>
+                <div class="numpad-key" data-key="00">00</div>
+            </div>
+            
+            <div class="login-actions">
+                <a href="{{ url_for('pos.index') }}" class="btn btn-cancel">Cancel</a>
+                <button type="submit" class="btn btn-login">Login</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const pinInput = document.getElementById('pin');
+        const numpadKeys = document.querySelectorAll('.numpad-key');
+        
+        numpadKeys.forEach(key => {
+            key.addEventListener('click', function() {
+                const keyValue = this.getAttribute('data-key');
+                
+                switch(keyValue) {
+                    case 'clear':
+                        pinInput.value = '';
+                        break;
+                    case 'backspace':
+                        pinInput.value = pinInput.value.slice(0, -1);
+                        break;
+                    case 'submit':
+                        document.querySelector('form').submit();
+                        break;
+                    default:
+                        pinInput.value += keyValue;
+                }
+            });
+        });
+        
+        // Allow keyboard input
+        document.addEventListener('keydown', function(e) {
+            if (e.key >= '0' && e.key <= '9') {
+                pinInput.value += e.key;
+            } else if (e.key === 'Backspace') {
+                pinInput.value = pinInput.value.slice(0, -1);
+            } else if (e.key === 'Enter') {
+                document.querySelector('form').submit();
+            }
+        });
+    });
+</script>
+{% endblock %}

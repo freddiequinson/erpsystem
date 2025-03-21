@@ -1,0 +1,769 @@
+{% extends 'base.html' %}
+
+{% block title %}POS Terminal{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pos_odoo_style.css') }}">
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+    }
+    
+    /* Category color classes */
+    .category-color-1 { background-color: #875A7B; }
+    .category-color-2 { background-color: #F0AD4E; }
+    .category-color-3 { background-color: #5BC0DE; }
+    .category-color-4 { background-color: #5CB85C; }
+    .category-color-5 { background-color: #D9534F; }
+    .category-color-6 { background-color: #337AB7; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pos-container">
+    <!-- Header -->
+    <div class="pos-header">
+        <div class="brand">
+            <i class="fas fa-cash-register me-2"></i> Point of Sale
+        </div>
+        
+        <div class="tabs">
+            <button class="btn active">Register</button>
+            <button class="btn">Orders</button>
+            <button class="btn"><i class="fas fa-sync-alt"></i></button>
+            <span class="session-id">{{ session.name }}</span>
+        </div>
+        
+        <div class="controls">
+            <button class="btn" id="customer-button">
+                <i class="fas fa-user me-1"></i> Customer
+            </button>
+            <button class="btn" id="invoice-button">
+                <i class="fas fa-file-invoice me-1"></i> Invoice
+            </button>
+            <button class="btn" id="note-button">
+                <i class="fas fa-sticky-note me-1"></i> Note
+            </button>
+            <a href="{{ url_for('pos.close_session', session_id=session.id) }}" class="btn" onclick="return confirm('Are you sure you want to close this session?');">
+                <i class="fas fa-power-off me-1"></i> Close
+            </a>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="pos-main">
+        <!-- Products Section -->
+        <div class="pos-products">
+            <!-- Search Bar -->
+            <div class="search-bar">
+                <input type="text" id="search-products" placeholder="Search products...">
+            </div>
+            
+            <!-- Category Tabs -->
+            <div class="category-tabs">
+                <button class="category-tab active" data-category="all">All Products</button>
+                {% for category in categories %}
+                <button class="category-tab category-color-{{ (loop.index % 6) + 1 if loop.index % 6 != 0 else 6 }}" data-category="{{ category.id }}">
+                    {{ category.name }}
+                </button>
+                {% endfor %}
+            </div>
+            
+            <!-- Products Grid -->
+            <div class="product-grid" id="products-container">
+                {% if products and products|length > 0 %}
+                    {% for product in products %}
+                    <div class="product-card {% if product.available_quantity <= 0 %}out-of-stock{% endif %}" 
+                         data-id="{{ product.id }}" 
+                         data-name="{{ product.name }}" 
+                         data-price="{{ product.sale_price }}"
+                         data-stock="{{ product.available_quantity }}"
+                         data-category="{{ product.category.id if product.category else 'none' }}">
+                        <div class="product-image">
+                            <i class="fas fa-box text-muted"></i>
+                        </div>
+                        <div class="product-info">
+                            <div class="product-name">{{ product.name }}</div>
+                            <div class="product-price">{{ currency }}{{ product.sale_price }}</div>
+                            <div class="product-stock">Stock: {{ product.available_quantity }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="no-products-message">
+                        <p>No products available. Please add products to your inventory.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Cart Section -->
+        <div class="pos-cart">
+            <!-- Cart Header -->
+            <div class="cart-header">
+                <h5>Current Order</h5>
+                <button class="btn" id="clear-cart">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            
+            <!-- Cart Items -->
+            <div class="cart-items" id="cart-items">
+                <div class="text-center py-5 text-muted" id="empty-cart-message">
+                    <i class="fas fa-shopping-cart fa-3x mb-3"></i>
+                    <p>Your cart is empty</p>
+                </div>
+                <!-- Cart items will be added here dynamically -->
+            </div>
+            
+            <!-- Cart Summary -->
+            <div class="cart-summary">
+                <div class="cart-total-row">
+                    <div class="cart-total-label">Subtotal:</div>
+                    <div class="cart-total-value" id="subtotal">GH₵0.00</div>
+                </div>
+                <div class="cart-total-row">
+                    <div class="cart-total-label">Tax (10%):</div>
+                    <div class="cart-total-value" id="tax">GH₵0.00</div>
+                </div>
+                <div class="cart-total-row">
+                    <div class="cart-total-label">Total:</div>
+                    <div class="cart-total-value" id="total">GH₵0.00</div>
+                </div>
+                
+                <div class="cart-actions">
+                    <button class="btn-clear" id="clear-cart-btn">
+                        <i class="fas fa-trash me-2"></i> Clear
+                    </button>
+                    <button class="btn-checkout" id="checkout-btn">
+                        <i class="fas fa-money-bill-wave me-2"></i> Pay
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Modal -->
+<div class="payment-modal" id="payment-modal" style="display: none;">
+    <div class="payment-modal-header">
+        <h4>Payment</h4>
+        <button class="btn" id="close-payment-modal">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    
+    <div class="payment-modal-body">
+        <div class="payment-methods">
+            <h5 class="mb-3">Payment Method</h5>
+            
+            {% for method in payment_methods %}
+            <div class="payment-method {% if loop.first %}active{% endif %}" data-method="{{ method.code }}">
+                <div class="payment-method-icon">
+                    {% if method.code == 'cash' %}
+                    <i class="fas fa-money-bill-wave"></i>
+                    {% elif method.code == 'card' %}
+                    <i class="fas fa-credit-card"></i>
+                    {% elif method.code == 'momo' %}
+                    <i class="fas fa-mobile-alt"></i>
+                    {% else %}
+                    <i class="fas fa-wallet"></i>
+                    {% endif %}
+                </div>
+                <div class="payment-method-details">
+                    <div class="payment-method-name">{{ method.name }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="payment-details">
+            <!-- Cash Payment Form -->
+            <div class="payment-form" id="cash-form">
+                <div class="form-group mb-3">
+                    <label>Amount Tendered</label>
+                    <input type="text" class="form-control" id="amount-tendered" value="0.00" readonly>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label>Change</label>
+                    <input type="text" class="form-control" id="change" value="0.00" readonly>
+                </div>
+                
+                <div class="numpad">
+                    <div class="numpad-key" data-key="1">1</div>
+                    <div class="numpad-key" data-key="2">2</div>
+                    <div class="numpad-key" data-key="3">3</div>
+                    <div class="numpad-key function" data-key="+10">+10</div>
+                    
+                    <div class="numpad-key" data-key="4">4</div>
+                    <div class="numpad-key" data-key="5">5</div>
+                    <div class="numpad-key" data-key="6">6</div>
+                    <div class="numpad-key function" data-key="+20">+20</div>
+                    
+                    <div class="numpad-key" data-key="7">7</div>
+                    <div class="numpad-key" data-key="8">8</div>
+                    <div class="numpad-key" data-key="9">9</div>
+                    <div class="numpad-key function" data-key="+50">+50</div>
+                    
+                    <div class="numpad-key" data-key="+/-">+/-</div>
+                    <div class="numpad-key" data-key="0">0</div>
+                    <div class="numpad-key" data-key=".">.</div>
+                    <div class="numpad-key function" data-key="C">C</div>
+                </div>
+            </div>
+            
+            <!-- Card Payment Form -->
+            <div class="payment-form" id="card-form" style="display: none;">
+                <div class="form-group mb-3">
+                    <label>Card Number</label>
+                    <input type="text" class="form-control" id="card-number" placeholder="XXXX XXXX XXXX XXXX">
+                </div>
+                
+                <div class="row">
+                    <div class="col-6">
+                        <div class="form-group mb-3">
+                            <label>Expiry Date</label>
+                            <input type="text" class="form-control" id="card-expiry" placeholder="MM/YY">
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="form-group mb-3">
+                            <label>CVV</label>
+                            <input type="text" class="form-control" id="card-cvv" placeholder="XXX">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Mobile Money Payment Form -->
+            <div class="payment-form" id="momo-form" style="display: none;">
+                <div class="form-group mb-3">
+                    <label>Phone Number</label>
+                    <input type="text" class="form-control" id="phone-number" placeholder="Enter phone number">
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label>Network</label>
+                    <select class="form-control" id="momo-network">
+                        <option value="mtn">MTN Mobile Money</option>
+                        <option value="vodafone">Vodafone Cash</option>
+                        <option value="airteltigo">AirtelTigo Money</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="payment-summary">
+                <div class="cart-total-row">
+                    <div class="cart-total-label">Items:</div>
+                    <div class="cart-total-value" id="payment-items-count">0</div>
+                </div>
+                <div class="cart-total-row">
+                    <div class="cart-total-label">Subtotal:</div>
+                    <div class="cart-total-value" id="payment-subtotal">GH₵0.00</div>
+                </div>
+                <div class="cart-total-row">
+                    <div class="cart-total-label">Tax:</div>
+                    <div class="cart-total-value" id="payment-tax">GH₵0.00</div>
+                </div>
+                <div class="cart-total-row">
+                    <div class="cart-total-label">Total:</div>
+                    <div class="cart-total-value" id="payment-total">GH₵0.00</div>
+                </div>
+                
+                <button class="btn btn-checkout" id="complete-payment">
+                    <i class="fas fa-check me-2"></i> Validate
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Customer Modal -->
+<div class="modal fade" id="customerModal" tabindex="-1" aria-labelledby="customerModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="customerModalLabel">Select Customer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <input type="text" class="form-control" id="customer-search" placeholder="Search customers...">
+                </div>
+                <div class="list-group" id="customer-list">
+                    {% for customer in customers %}
+                    <button type="button" class="list-group-item list-group-item-action" data-id="{{ customer.id }}" data-name="{{ customer.name }}">
+                        {{ customer.name }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="select-customer">Select</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Debug information
+        console.log('DOM loaded');
+        
+        // Cart state
+        let cart = [];
+        let selectedPaymentMethod = 'cash';
+        let selectedCustomer = null;
+        const currency = 'GH₵';
+        
+        // DOM Elements
+        const productSearch = document.getElementById('search-products');
+        const productCards = document.querySelectorAll('.product-card');
+        const cartItemsContainer = document.getElementById('cart-items');
+        const emptyCartMessage = document.getElementById('empty-cart-message');
+        const clearCartButton = document.getElementById('clear-cart');
+        const clearCartBtn = document.getElementById('clear-cart-btn');
+        const checkoutButton = document.getElementById('checkout-btn');
+        const subtotalElement = document.getElementById('subtotal');
+        const taxElement = document.getElementById('tax');
+        const totalElement = document.getElementById('total');
+        const categoryTabs = document.querySelectorAll('.category-tab');
+        
+        // Debug product cards
+        console.log('Product cards count:', productCards.length);
+        if (productCards.length > 0) {
+            productCards.forEach((card, index) => {
+                if (index < 5) { // Log only first 5 for brevity
+                    console.log(`Product ${index}:`, {
+                        id: card.getAttribute('data-id'),
+                        name: card.getAttribute('data-name'),
+                        category: card.getAttribute('data-category'),
+                        display: card.style.display
+                    });
+                }
+            });
+        } else {
+            console.log('No product cards found in the DOM');
+            console.log('Products container:', document.getElementById('products-container').innerHTML);
+        }
+        
+        // Payment Modal Elements
+        const paymentModal = document.getElementById('payment-modal');
+        const closePaymentModalButton = document.getElementById('close-payment-modal');
+        const paymentMethods = document.querySelectorAll('.payment-method');
+        const paymentForms = document.querySelectorAll('.payment-form');
+        const amountTendered = document.getElementById('amount-tendered');
+        const changeElement = document.getElementById('change');
+        const completePaymentButton = document.getElementById('complete-payment');
+        const paymentItemsCount = document.getElementById('payment-items-count');
+        const paymentSubtotal = document.getElementById('payment-subtotal');
+        const paymentTax = document.getElementById('payment-tax');
+        const paymentTotal = document.getElementById('payment-total');
+        
+        // Customer Modal Elements
+        const customerButton = document.getElementById('customer-button');
+        const customerModal = new bootstrap.Modal(document.getElementById('customerModal'));
+        const customerSearch = document.getElementById('customer-search');
+        const customerList = document.getElementById('customer-list');
+        const customerItems = document.querySelectorAll('#customer-list .list-group-item');
+        const selectCustomerButton = document.getElementById('select-customer');
+        
+        // Numpad Elements
+        const numpadKeys = document.querySelectorAll('.numpad-key');
+        
+        // Category filtering
+        categoryTabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                // Remove active class from all category tabs
+                categoryTabs.forEach(t => t.classList.remove('active'));
+                // Add active class to clicked tab
+                this.classList.add('active');
+                
+                const category = this.getAttribute('data-category');
+                
+                // Filter products
+                productCards.forEach(card => {
+                    if (category === 'all' || card.getAttribute('data-category') === category) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
+        
+        // Product search
+        productSearch.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            
+            // Get active category
+            const activeCategory = document.querySelector('.category-tab.active').getAttribute('data-category');
+            
+            productCards.forEach(card => {
+                const productName = card.getAttribute('data-name').toLowerCase();
+                const productCategory = card.getAttribute('data-category');
+                
+                // Check if product matches search term and category filter
+                const matchesSearch = productName.includes(searchTerm);
+                const matchesCategory = activeCategory === 'all' || productCategory === activeCategory;
+                
+                if (matchesSearch && matchesCategory) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+        
+        // Add product to cart
+        productCards.forEach(card => {
+            card.addEventListener('click', function() {
+                const productId = parseInt(this.getAttribute('data-id'));
+                const productName = this.getAttribute('data-name');
+                const productPrice = parseFloat(this.getAttribute('data-price'));
+                const productStock = parseInt(this.getAttribute('data-stock'));
+                
+                // Check if product is already in cart
+                const existingItem = cart.find(item => item.id === productId);
+                
+                if (existingItem) {
+                    // Update quantity if already in cart
+                    if (existingItem.quantity < productStock) {
+                        existingItem.quantity += 1;
+                    } else {
+                        alert('Cannot add more of this product. Maximum stock reached.');
+                        return;
+                    }
+                } else {
+                    // Add new item to cart
+                    cart.push({
+                        id: productId,
+                        name: productName,
+                        price: productPrice,
+                        quantity: 1,
+                        maxStock: productStock
+                    });
+                }
+                
+                // Update cart UI
+                updateCartUI();
+            });
+        });
+        
+        // Clear cart button
+        clearCartButton.addEventListener('click', function() {
+            if (confirm('Are you sure you want to clear the cart?')) {
+                cart = [];
+                updateCartUI();
+            }
+        });
+        
+        clearCartBtn.addEventListener('click', function() {
+            if (confirm('Are you sure you want to clear the cart?')) {
+                cart = [];
+                updateCartUI();
+            }
+        });
+        
+        // Checkout button
+        checkoutButton.addEventListener('click', function() {
+            if (cart.length === 0) {
+                alert('Your cart is empty. Please add items before checkout.');
+                return;
+            }
+            
+            // Update payment modal with cart details
+            paymentItemsCount.textContent = cart.reduce((total, item) => total + item.quantity, 0);
+            
+            const subtotal = calculateSubtotal();
+            const tax = calculateTax();
+            const total = subtotal + tax;
+            
+            paymentSubtotal.textContent = `${currency}${subtotal.toFixed(2)}`;
+            paymentTax.textContent = `${currency}${tax.toFixed(2)}`;
+            paymentTotal.textContent = `${currency}${total.toFixed(2)}`;
+            
+            // Set initial amount tendered to match total
+            amountTendered.value = total.toFixed(2);
+            changeElement.value = '0.00';
+            
+            // Show payment modal
+            paymentModal.style.display = 'flex';
+        });
+        
+        // Close payment modal
+        closePaymentModalButton.addEventListener('click', function() {
+            paymentModal.style.display = 'none';
+        });
+        
+        // Payment method selection
+        paymentMethods.forEach(method => {
+            method.addEventListener('click', function() {
+                // Remove active class from all methods
+                paymentMethods.forEach(m => m.classList.remove('active'));
+                // Add active class to clicked method
+                this.classList.add('active');
+                
+                // Get selected payment method
+                selectedPaymentMethod = this.getAttribute('data-method');
+                
+                // Show corresponding payment form
+                paymentForms.forEach(form => {
+                    form.style.display = 'none';
+                });
+                
+                document.getElementById(`${selectedPaymentMethod}-form`).style.display = 'block';
+            });
+        });
+        
+        // Numpad functionality
+        numpadKeys.forEach(key => {
+            key.addEventListener('click', function() {
+                const keyValue = this.getAttribute('data-key');
+                let currentAmount = parseFloat(amountTendered.value) || 0;
+                
+                switch(keyValue) {
+                    case '+10':
+                        currentAmount += 10;
+                        break;
+                    case '+20':
+                        currentAmount += 20;
+                        break;
+                    case '+50':
+                        currentAmount += 50;
+                        break;
+                    case '+/-':
+                        currentAmount = -currentAmount;
+                        break;
+                    case 'C':
+                        currentAmount = 0;
+                        break;
+                    case '.':
+                        if (!amountTendered.value.includes('.')) {
+                            amountTendered.value += '.';
+                            return;
+                        }
+                        break;
+                    default:
+                        if (amountTendered.value === '0.00' || amountTendered.value === '0') {
+                            amountTendered.value = keyValue;
+                        } else {
+                            amountTendered.value += keyValue;
+                        }
+                        
+                        // Calculate change
+                        const total = calculateSubtotal() + calculateTax();
+                        const tendered = parseFloat(amountTendered.value) || 0;
+                        const change = tendered - total;
+                        
+                        changeElement.value = change > 0 ? change.toFixed(2) : '0.00';
+                        return;
+                }
+                
+                amountTendered.value = currentAmount.toFixed(2);
+                
+                // Calculate change
+                const total = calculateSubtotal() + calculateTax();
+                const tendered = parseFloat(amountTendered.value) || 0;
+                const change = tendered - total;
+                
+                changeElement.value = change > 0 ? change.toFixed(2) : '0.00';
+            });
+        });
+        
+        // Complete payment
+        completePaymentButton.addEventListener('click', function() {
+            if (selectedPaymentMethod === 'cash') {
+                const tendered = parseFloat(amountTendered.value) || 0;
+                const total = calculateSubtotal() + calculateTax();
+                
+                if (tendered < total) {
+                    alert('Insufficient amount tendered.');
+                    return;
+                }
+            }
+            
+            // Prepare order data
+            const orderData = {
+                customer_id: selectedCustomer ? selectedCustomer.id : null,
+                payment_method: selectedPaymentMethod,
+                items: cart.map(item => ({
+                    product_id: parseInt(item.id),
+                    quantity: parseInt(item.quantity),
+                    unit_price: parseFloat(item.price)
+                })),
+                total_amount: calculateSubtotal() + calculateTax(),
+                tax_amount: calculateTax(),
+                payment_reference: selectedPaymentMethod === 'card' ? 
+                    document.getElementById('card-number').value : 
+                    (selectedPaymentMethod === 'momo' ? document.getElementById('phone-number').value : '')
+            };
+            
+            console.log('Sending order data:', orderData);
+            fetch('/pos/api/create-order', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(orderData)
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Response data:', data);
+                if (data.success) {
+                    alert('Order completed successfully!');
+                    cart = [];
+                    updateCartUI();
+                    paymentModal.style.display = 'none';
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while processing your order.');
+            });
+        });
+        
+        // Customer selection
+        customerButton.addEventListener('click', function() {
+            customerModal.show();
+        });
+        
+        customerSearch.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            
+            customerItems.forEach(item => {
+                const customerName = item.textContent.trim().toLowerCase();
+                
+                if (customerName.includes(searchTerm)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+        
+        customerItems.forEach(item => {
+            item.addEventListener('click', function() {
+                customerItems.forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+        
+        selectCustomerButton.addEventListener('click', function() {
+            const selectedItem = document.querySelector('#customer-list .list-group-item.active');
+            
+            if (selectedItem) {
+                selectedCustomer = {
+                    id: parseInt(selectedItem.getAttribute('data-id')),
+                    name: selectedItem.getAttribute('data-name')
+                };
+                
+                customerButton.innerHTML = `<i class="fas fa-user me-1"></i> ${selectedCustomer.name}`;
+                customerModal.hide();
+            } else {
+                alert('Please select a customer.');
+            }
+        });
+        
+        // Helper function to update cart UI
+        function updateCartUI() {
+            if (cart.length === 0) {
+                emptyCartMessage.style.display = 'block';
+                cartItemsContainer.innerHTML = '';
+                checkoutButton.disabled = true;
+            } else {
+                emptyCartMessage.style.display = 'none';
+                
+                // Clear cart items container
+                cartItemsContainer.innerHTML = '';
+                
+                // Add each item to the cart UI
+                cart.forEach((item, index) => {
+                    const cartItem = document.createElement('div');
+                    cartItem.className = 'cart-item';
+                    
+                    cartItem.innerHTML = `
+                        <div class="cart-item-info">
+                            <div class="cart-item-name">${item.name}</div>
+                            <div class="cart-item-price">${currency}${item.price} x ${item.quantity}</div>
+                        </div>
+                        <div class="cart-item-controls">
+                            <input type="number" class="cart-item-quantity" data-index="${index}" value="${item.quantity}" min="1" max="${item.maxStock}">
+                            <button class="btn remove-item" data-index="${index}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                    
+                    cartItemsContainer.appendChild(cartItem);
+                });
+                
+                // Add event listeners to quantity inputs and remove buttons
+                document.querySelectorAll('.cart-item-quantity').forEach(input => {
+                    input.addEventListener('change', function() {
+                        const index = parseInt(this.getAttribute('data-index'));
+                        const newQuantity = parseInt(this.value) || 1;
+                        
+                        if (newQuantity < 1) {
+                            this.value = 1;
+                            cart[index].quantity = 1;
+                        } else if (newQuantity > cart[index].maxStock) {
+                            this.value = cart[index].maxStock;
+                            cart[index].quantity = cart[index].maxStock;
+                            alert('Cannot add more of this product. Maximum stock reached.');
+                        } else {
+                            cart[index].quantity = newQuantity;
+                        }
+                        
+                        updateCartUI();
+                    });
+                });
+                
+                document.querySelectorAll('.remove-item').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const index = parseInt(this.getAttribute('data-index'));
+                        cart.splice(index, 1);
+                        updateCartUI();
+                    });
+                });
+                
+                checkoutButton.disabled = false;
+            }
+            
+            // Update totals
+            const subtotal = calculateSubtotal();
+            const tax = calculateTax();
+            const total = subtotal + tax;
+            
+            subtotalElement.textContent = `${currency}${subtotal.toFixed(2)}`;
+            taxElement.textContent = `${currency}${tax.toFixed(2)}`;
+            totalElement.textContent = `${currency}${total.toFixed(2)}`;
+        }
+        
+        // Helper function to calculate subtotal
+        function calculateSubtotal() {
+            return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+        }
+        
+        // Helper function to calculate tax
+        function calculateTax() {
+            // 10% tax rate for now, can be adjusted as needed
+            return calculateSubtotal() * 0.1;
+        }
+        
+        // Initialize cart UI
+        updateCartUI();
+    });
+</script>
+{% endblock %}

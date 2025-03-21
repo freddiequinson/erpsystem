@@ -1,0 +1,301 @@
+{% extends 'base.html' %}
+
+{% block title %}Sales Orders{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Sales Orders</h1>
+            <p class="text-muted">Manage your sales orders and customer invoices</p>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('sales.new_order') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> New Sales Order
+            </a>
+        </div>
+    </div>
+
+    <!-- Order Status Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-0">Draft</h6>
+                            <h3 class="mb-0">{{ draft_count }}</h3>
+                        </div>
+                        <div class="bg-secondary rounded-circle p-3">
+                            <i class="fas fa-file text-white"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer p-2">
+                    <a href="{{ url_for('sales.orders', state='draft') }}" class="text-decoration-none">View draft orders</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-0">Confirmed</h6>
+                            <h3 class="mb-0">{{ confirmed_count }}</h3>
+                        </div>
+                        <div class="bg-primary rounded-circle p-3">
+                            <i class="fas fa-check text-white"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer p-2">
+                    <a href="{{ url_for('sales.orders', state='confirmed') }}" class="text-decoration-none">View confirmed orders</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-0">Done</h6>
+                            <h3 class="mb-0">{{ done_count }}</h3>
+                        </div>
+                        <div class="bg-success rounded-circle p-3">
+                            <i class="fas fa-check-double text-white"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer p-2">
+                    <a href="{{ url_for('sales.orders', state='done') }}" class="text-decoration-none">View completed orders</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-0">Cancelled</h6>
+                            <h3 class="mb-0">{{ cancelled_count }}</h3>
+                        </div>
+                        <div class="bg-danger rounded-circle p-3">
+                            <i class="fas fa-times text-white"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer p-2">
+                    <a href="{{ url_for('sales.orders', state='cancelled') }}" class="text-decoration-none">View cancelled orders</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Filter Orders</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" action="{{ url_for('sales.orders') }}" class="row g-3">
+                <div class="col-md-3">
+                    <label for="state" class="form-label">Status</label>
+                    <select name="state" id="state" class="form-select">
+                        <option value="">All Statuses</option>
+                        <option value="draft" {% if state_filter == 'draft' %}selected{% endif %}>Draft</option>
+                        <option value="confirmed" {% if state_filter == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                        <option value="done" {% if state_filter == 'done' %}selected{% endif %}>Done</option>
+                        <option value="cancelled" {% if state_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="customer_id" class="form-label">Customer</label>
+                    <select name="customer_id" id="customer_id" class="form-select">
+                        <option value="">All Customers</option>
+                        {% for customer in customers %}
+                        <option value="{{ customer.id }}" {% if customer_filter|int == customer.id %}selected{% endif %}>{{ customer.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="date_from" class="form-label">Date From</label>
+                    <input type="date" class="form-control" id="date_from" name="date_from" value="{{ date_from }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="date_to" class="form-label">Date To</label>
+                    <input type="date" class="form-control" id="date_to" name="date_to" value="{{ date_to }}">
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">Apply Filters</button>
+                    <a href="{{ url_for('sales.orders') }}" class="btn btn-outline-secondary">Clear Filters</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Sales Orders</h5>
+            <div>
+                <span class="text-muted me-3">Total: ₵{{ "%.2f"|format(total_amount) }}</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Date</th>
+                            <th>Customer</th>
+                            <th>Status</th>
+                            <th>Total</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if orders %}
+                            {% for order in orders %}
+                            <tr>
+                                <td>{{ order.name }}</td>
+                                <td>{{ order.order_date.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ order.customer.name }}</td>
+                                <td>
+                                    {% if order.state == 'draft' %}
+                                        <span class="badge bg-secondary">Draft</span>
+                                    {% elif order.state == 'confirmed' %}
+                                        <span class="badge bg-primary">Confirmed</span>
+                                    {% elif order.state == 'done' %}
+                                        <span class="badge bg-success">Done</span>
+                                    {% elif order.state == 'cancelled' %}
+                                        <span class="badge bg-danger">Cancelled</span>
+                                    {% endif %}
+                                </td>
+                                <td>₵{{ "%.2f"|format(order.total_amount) }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('sales.edit_order', order_id=order.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                        {% if order.state == 'draft' %}
+                                        <a href="{{ url_for('sales.edit_order', order_id=order.id) }}" class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#confirmModal{{ order.id }}">
+                                            <i class="fas fa-check"></i> Confirm
+                                        </button>
+                                        {% elif order.state == 'confirmed' %}
+                                        <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#invoiceModal{{ order.id }}">
+                                            <i class="fas fa-file-invoice"></i> Invoice
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#completeModal{{ order.id }}">
+                                            <i class="fas fa-check-double"></i> Complete
+                                        </button>
+                                        {% endif %}
+                                        
+                                        {% if order.state != 'cancelled' and order.state != 'done' %}
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelModal{{ order.id }}">
+                                            <i class="fas fa-times"></i> Cancel
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Confirm Modal -->
+                                    <div class="modal fade" id="confirmModal{{ order.id }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Confirm Order</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    Are you sure you want to confirm order #{{ order.name }}? This will create stock moves and cannot be undone.
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                    <form action="{{ url_for('sales.confirm_order', order_id=order.id) }}" method="post">
+                                                        <button type="submit" class="btn btn-success">Confirm Order</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Complete Modal -->
+                                    <div class="modal fade" id="completeModal{{ order.id }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Complete Order</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    Are you sure you want to mark order #{{ order.name }} as completed?
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                    <form action="{{ url_for('sales.complete_order', order_id=order.id) }}" method="post">
+                                                        <button type="submit" class="btn btn-success">Complete Order</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Invoice Modal -->
+                                    <div class="modal fade" id="invoiceModal{{ order.id }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Create Invoice</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    Are you sure you want to create an invoice for order #{{ order.name }}?
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                    <form action="{{ url_for('sales.create_invoice', order_id=order.id) }}" method="post">
+                                                        <button type="submit" class="btn btn-primary">Create Invoice</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Cancel Modal -->
+                                    <div class="modal fade" id="cancelModal{{ order.id }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Cancel Order</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    Are you sure you want to cancel order #{{ order.name }}?
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+                                                    <form action="{{ url_for('sales.cancel_order', order_id=order.id) }}" method="post">
+                                                        <button type="submit" class="btn btn-danger">Yes, Cancel Order</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-3">No sales orders found</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

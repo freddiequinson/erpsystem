@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+
+{% block title %}Purchase Orders{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Purchase Orders</h1>
+            <p class="text-muted">Manage your purchase orders and vendor bills</p>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('purchase.new_order') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> New Purchase Order
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Purchase Orders</h5>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-filter"></i> Filter
+                </button>
+                <div class="btn-group ms-2">
+                    <button class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-sort-amount-down"></i> Sort
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+                        <span class="visually-hidden">Toggle Dropdown</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="#">Date (Newest)</a></li>
+                        <li><a class="dropdown-item" href="#">Date (Oldest)</a></li>
+                        <li><a class="dropdown-item" href="#">Vendor (A-Z)</a></li>
+                        <li><a class="dropdown-item" href="#">Total (High to Low)</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Date</th>
+                            <th>Vendor</th>
+                            <th>Status</th>
+                            <th>Total</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if orders %}
+                            {% for order in orders %}
+                            <tr>
+                                <td>{{ order.name }}</td>
+                                <td>{{ order.order_date.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ order.supplier.name }}</td>
+                                <td>
+                                    {% if order.state == 'draft' %}
+                                        <span class="badge bg-secondary">Draft</span>
+                                    {% elif order.state == 'confirmed' %}
+                                        <span class="badge bg-primary">Confirmed</span>
+                                    {% elif order.state == 'received' %}
+                                        <span class="badge bg-success">Received</span>
+                                    {% elif order.state == 'cancelled' %}
+                                        <span class="badge bg-danger">Cancelled</span>
+                                    {% endif %}
+                                </td>
+                                <td>₵{{ "%.2f"|format(order.total_amount) }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('purchase.view_order', order_id=order.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('purchase.edit_order', order_id=order.id) }}" class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ order.id }}">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Delete Modal -->
+                                    <div class="modal fade" id="deleteModal{{ order.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ order.id }}" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="deleteModalLabel{{ order.id }}">Confirm Delete</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    Are you sure you want to delete purchase order #{{ order.name }}?
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                    <form action="{{ url_for('purchase.delete_order', order_id=order.id) }}" method="post">
+                                                        <button type="submit" class="btn btn-danger">Delete</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-3">No purchase orders found</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer">
+            <nav>
+                <ul class="pagination justify-content-center mb-0">
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" tabindex="-1">Previous</a>
+                    </li>
+                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                    <li class="page-item"><a class="page-link" href="#">3</a></li>
+                    <li class="page-item">
+                        <a class="page-link" href="#">Next</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+{% endblock %}

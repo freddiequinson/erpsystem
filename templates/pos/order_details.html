@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+
+{% block title %}Order Details - {{ order.name }}{% endblock %}
+
+{% block styles %}
+<style>
+    .order-details-container {
+        padding: 20px;
+    }
+    .card {
+        margin-bottom: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .card-header {
+        background-color: #6c5ce7;
+        color: white;
+        border-radius: 10px 10px 0 0 !important;
+        padding: 15px 20px;
+    }
+    .order-info {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    .order-info-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e9ecef;
+    }
+    .order-info-row:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    .order-info-label {
+        font-weight: 600;
+        color: #6c757d;
+    }
+    .order-info-value {
+        font-weight: 500;
+        color: #2d3436;
+    }
+    .table th {
+        background-color: #f8f9fa;
+    }
+    .badge-status {
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-weight: normal;
+    }
+    .badge-paid {
+        background-color: #00b894;
+        color: white;
+    }
+    .badge-draft {
+        background-color: #fdcb6e;
+        color: #333;
+    }
+    .badge-cancelled {
+        background-color: #d63031;
+        color: white;
+    }
+    .product-image {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 5px;
+    }
+    .action-buttons {
+        margin-top: 20px;
+    }
+    .action-buttons .btn {
+        margin-right: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="order-details-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-receipt me-2"></i> Order Details</h2>
+        <div>
+            <a href="{{ url_for('pos.orders') }}" class="btn btn-outline-secondary me-2">
+                <i class="fas fa-arrow-left me-2"></i> Back to Orders
+            </a>
+            <a href="{{ url_for('pos.view_receipt', order_id=order.id) }}" target="_blank" class="btn btn-outline-primary me-2">
+                <i class="fas fa-receipt me-2"></i> View Receipt
+            </a>
+            <a href="{{ url_for('pos.print_receipt', order_id=order.id) }}" target="_blank" class="btn btn-primary">
+                <i class="fas fa-print me-2"></i> Print Receipt
+            </a>
+        </div>
+    </div>
+
+    <!-- Order Info -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Order Information</h5>
+            <span class="badge {% if order.state == 'paid' %}badge-paid{% elif order.state == 'draft' %}badge-draft{% elif order.state == 'cancelled' %}badge-cancelled{% endif %}">
+                {{ order.state|capitalize }}
+            </span>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="order-info">
+                        <div class="order-info-row">
+                            <span class="order-info-label">Order Number:</span>
+                            <span class="order-info-value">{{ order.name }}</span>
+                        </div>
+                        <div class="order-info-row">
+                            <span class="order-info-label">Date & Time:</span>
+                            <span class="order-info-value">{{ order.order_date.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+                        </div>
+                        <div class="order-info-row">
+                            <span class="order-info-label">Customer:</span>
+                            <span class="order-info-value">
+                                {% if order.customer %}
+                                {{ order.customer.name }}
+                                {% else %}
+                                Walk-in Customer
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="order-info-row">
+                            <span class="order-info-label">Cashier:</span>
+                            <span class="order-info-value">{{ order.session.user.username }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="order-info">
+                        <div class="order-info-row">
+                            <span class="order-info-label">Payment Method:</span>
+                            <span class="order-info-value text-capitalize">{{ order.payment_method }}</span>
+                        </div>
+                        {% if order.payment_reference %}
+                        <div class="order-info-row">
+                            <span class="order-info-label">Payment Reference:</span>
+                            <span class="order-info-value">{{ order.payment_reference }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="order-info-row">
+                            <span class="order-info-label">Subtotal:</span>
+                            <span class="order-info-value">₵{{ "%.2f"|format(order.total_amount - order.tax_amount) }}</span>
+                        </div>
+                        <div class="order-info-row">
+                            <span class="order-info-label">Tax:</span>
+                            <span class="order-info-value">₵{{ "%.2f"|format(order.tax_amount) }}</span>
+                        </div>
+                        <div class="order-info-row">
+                            <span class="order-info-label">Total:</span>
+                            <span class="order-info-value font-weight-bold">₵{{ "%.2f"|format(order.total_amount) }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Items -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Order Items</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th style="width: 60px;">Image</th>
+                            <th>Product</th>
+                            <th>Unit Price</th>
+                            <th>Quantity</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for line in order.lines %}
+                        <tr>
+                            <td>
+                                {% if line.product.image %}
+                                <img src="{{ url_for('static', filename='uploads/products/' + line.product.image) }}" alt="{{ line.product.name }}" class="product-image">
+                                {% else %}
+                                <div class="product-image bg-light d-flex align-items-center justify-content-center">
+                                    <i class="fas fa-box text-muted"></i>
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="fw-bold">{{ line.product.name }}</div>
+                                <small class="text-muted">{{ line.product.sku }}</small>
+                            </td>
+                            <td>₵{{ "%.2f"|format(line.unit_price) }}</td>
+                            <td>{{ line.quantity }}</td>
+                            <td>₵{{ "%.2f"|format(line.unit_price * line.quantity) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" class="text-end fw-bold">Subtotal:</td>
+                            <td>₵{{ "%.2f"|format(order.total_amount - order.tax_amount) }}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" class="text-end fw-bold">Tax:</td>
+                            <td>₵{{ "%.2f"|format(order.tax_amount) }}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" class="text-end fw-bold">Total:</td>
+                            <td class="fw-bold">₵{{ "%.2f"|format(order.total_amount) }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

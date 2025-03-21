@@ -1,0 +1,457 @@
+{% extends 'base.html' %}
+
+{% block title %}Point of Sale{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pos_unified.css') }}">
+<style>
+    .pos-dashboard {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        padding: 2rem 0;
+    }
+    
+    .dashboard-header {
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .dashboard-header h1 {
+        font-weight: 600;
+        color: #4a6cf7;
+        margin-bottom: 0.5rem;
+    }
+    
+    .dashboard-header p {
+        color: #6c757d;
+        font-size: 1.1rem;
+    }
+    
+    .dashboard-card {
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        padding: 2rem;
+        height: 100%;
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    }
+    
+    .card-icon {
+        font-size: 3rem;
+        color: #4a6cf7;
+        margin-bottom: 1.5rem;
+        text-align: center;
+    }
+    
+    .card-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: #343a40;
+    }
+    
+    .card-text {
+        color: #6c757d;
+        margin-bottom: 1.5rem;
+        font-size: 1rem;
+        line-height: 1.5;
+    }
+    
+    .btn-pos {
+        display: block;
+        width: 100%;
+        padding: 0.75rem;
+        border-radius: 5px;
+        font-weight: 600;
+        text-align: center;
+        transition: all 0.3s;
+    }
+    
+    .btn-primary-pos {
+        background-color: #4a6cf7;
+        color: white;
+        border: none;
+    }
+    
+    .btn-primary-pos:hover {
+        background-color: #3a5bd9;
+        transform: translateY(-2px);
+    }
+    
+    .btn-secondary-pos {
+        background-color: #f8f9fa;
+        color: #6c757d;
+        border: 1px solid #dee2e6;
+    }
+    
+    .btn-secondary-pos:hover {
+        background-color: #e9ecef;
+        transform: translateY(-2px);
+    }
+    
+    .session-card {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border-left: 5px solid #4a6cf7;
+    }
+    
+    .session-info {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    .session-icon {
+        font-size: 2rem;
+        color: #4a6cf7;
+        margin-right: 1rem;
+    }
+    
+    .session-details h3 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #343a40;
+    }
+    
+    .session-details p {
+        margin: 0;
+        color: #6c757d;
+    }
+    
+    .session-actions {
+        display: flex;
+        gap: 1rem;
+    }
+    
+    .stats-card {
+        background-color: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        margin-bottom: 1rem;
+    }
+    
+    .stats-title {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stats-value {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #343a40;
+    }
+    
+    .stats-icon {
+        font-size: 2rem;
+        color: #4a6cf7;
+    }
+    
+    .stats-subtitle {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    
+    .bg-danger-subtle {
+        background-color: #f8d7da;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container pos-dashboard">
+    <div class="dashboard-header">
+        <h1>Point of Sale</h1>
+        <p>Manage your sales and inventory with our modern POS system</p>
+    </div>
+    
+    {% if current_user.has_role('Manager') or current_user.has_role('Admin') %}
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="alert alert-info d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-chart-line me-2"></i>
+                    <strong>Manager Tools:</strong> Monitor your sales workers' performance including returns and sales metrics
+                </div>
+                <a href="{{ url_for('manager.sales_worker_dashboard') }}" class="btn btn-primary">
+                    Sales Worker Monitoring
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% if active_session %}
+    <div class="session-card">
+        <div class="session-info">
+            <div class="session-icon">
+                <i class="fas fa-cash-register"></i>
+            </div>
+            <div class="session-details">
+                <h3>Active Session: {{ active_session.name }}</h3>
+                <p>Opened: {{ active_session.start_time.strftime('%Y-%m-%d %H:%M') }}</p>
+            </div>
+        </div>
+        <div class="session-actions">
+            <a href="{{ url_for('pos.terminal') }}" class="btn btn-primary-pos">
+                <i class="fas fa-cash-register me-2"></i> Open POS Terminal
+            </a>
+            <a href="{{ url_for('pos.close_session', session_id=active_session.id) }}" class="btn btn-secondary-pos">
+                <i class="fas fa-door-closed me-2"></i> Close Session
+            </a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-3">
+            <div class="stats-card d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-title">{% if is_sales_worker %}My{% endif %} Net Sales</div>
+                    <div class="stats-value">₵{{ today_sales|default('0.00') }}</div>
+                    <div class="stats-subtitle">After Returns</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card d-flex justify-content-between align-items-center bg-danger-subtle">
+                <div>
+                    <div class="stats-title">{% if is_sales_worker %}My{% endif %} Returns</div>
+                    <div class="stats-value">₵{{ today_returns|default('0.00') }}</div>
+                    <div class="stats-subtitle">Today's Returns</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="fas fa-undo-alt"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-title">{% if is_sales_worker %}My{% endif %} Orders Today</div>
+                    <div class="stats-value">{{ today_orders|default('0') }}</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="fas fa-shopping-cart"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-title">{% if is_sales_worker %}My{% endif %} Cash Balance</div>
+                    <div class="stats-value">₵{{ cash_balance|default('0.00') }}</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <h3 class="mb-3">POS Management</h3>
+        </div>
+        <div class="col-md-4">
+            <div class="dashboard-card">
+                <div class="card-icon">
+                    <i class="fas fa-cash-register"></i>
+                </div>
+                <h3 class="card-title">Sessions</h3>
+                <p class="card-description">
+                    View all your POS sessions, close active sessions, and generate daily sales reports.
+                </p>
+                <div class="card-actions">
+                    <a href="{{ url_for('pos.sessions') }}" class="btn btn-primary btn-block">
+                        <i class="fas fa-list me-2"></i> View Sessions
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="dashboard-card">
+                <div class="card-icon">
+                    <i class="fas fa-cog"></i>
+                </div>
+                <h3 class="card-title">POS Configuration</h3>
+                <p class="card-text">
+                    Configure your POS settings, payment methods, and receipt layout.
+                </p>
+                <a href="{{ url_for('pos.config') }}" class="btn btn-secondary-pos">
+                    <i class="fas fa-cog me-2"></i> Configure
+                </a>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="dashboard-card">
+                <div class="card-icon">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                </div>
+                <h3 class="card-title">Sales Reports</h3>
+                <p class="card-text">
+                    Generate detailed sales reports and analyze your business performance.
+                </p>
+                <a href="{{ url_for('pos.sessions') }}" class="btn btn-secondary-pos">
+                    <i class="fas fa-chart-bar me-2"></i> View Reports
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <h3 class="mb-3">Today's Transactions</h3>
+        </div>
+        <div class="col-md-12">
+            <div class="dashboard-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="card-icon d-inline-block me-3" style="font-size: 2.5rem; margin-bottom: 0;">
+                            <i class="fas fa-receipt"></i>
+                        </div>
+                        <h3 class="card-title d-inline-block mb-0">Transaction History</h3>
+                        <p class="card-text mt-2">
+                            View all transactions made today, print receipts, and track your sales performance.
+                        </p>
+                    </div>
+                    <div>
+                        <a href="{{ url_for('pos.orders') }}" class="btn btn-primary-pos btn-lg">
+                            <i class="fas fa-receipt me-2"></i> View Today's Orders
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <h3 class="mb-3">Returns Management</h3>
+        </div>
+        <div class="col-md-4">
+            <div class="dashboard-card">
+                <div class="card-icon">
+                    <i class="fas fa-exchange-alt"></i>
+                </div>
+                <h3 class="card-title">Product Returns</h3>
+                <p class="card-text">
+                    Process customer returns, issue refunds, and manage returned inventory.
+                </p>
+                <a href="#" onclick="alert('Returns functionality not implemented yet.'); return false;" class="btn btn-primary-pos">
+                    <i class="fas fa-undo me-2"></i> Manage Returns
+                </a>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="dashboard-card">
+                <div class="card-icon">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
+                <h3 class="card-title">Quality Checks</h3>
+                <p class="card-text">
+                    Evaluate returned products, determine their condition, and decide their disposition.
+                </p>
+                <a href="{{ url_for('pos.quality_checks') }}" class="btn btn-secondary-pos">
+                    <i class="fas fa-tasks me-2"></i> View Quality Checks
+                </a>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="dashboard-card">
+                <div class="card-icon">
+                    <i class="fas fa-chart-pie"></i>
+                </div>
+                <h3 class="card-title">Returns Analytics</h3>
+                <p class="card-text">
+                    View detailed reports on returns, analyze return reasons, and track refund amounts.
+                </p>
+                <a href="{{ url_for('pos.returns_report') }}" class="btn btn-secondary-pos">
+                    <i class="fas fa-chart-bar me-2"></i> View Reports
+                </a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <div class="dashboard-card text-center">
+                <div class="card-icon">
+                    <i class="fas fa-cash-register"></i>
+                </div>
+                <h2 class="card-title">Start a New Session</h2>
+                <p class="card-text">
+                    You need to open a POS session before you can start selling. 
+                    A session represents a period of sales activity and helps track cash movements.
+                </p>
+                <a href="{{ url_for('pos.new_session') }}" class="btn btn-primary-pos">
+                    <i class="fas fa-plus-circle me-2"></i> Open New Session
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% if active_session %}
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <h3 class="mb-3">POS Management</h3>
+        </div>
+        <div class="col-md-4">
+            <div class="dashboard-card">
+                <div class="card-icon">
+                    <i class="fas fa-cash-register"></i>
+                </div>
+                <h3 class="card-title">Sessions</h3>
+                <p class="card-description">
+                    View all your POS sessions, close active sessions, and generate daily sales reports.
+                </p>
+                <div class="card-actions">
+                    <a href="{{ url_for('pos.sessions') }}" class="btn btn-primary btn-block">
+                        <i class="fas fa-list me-2"></i> View Sessions
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="dashboard-card">
+                <div class="card-icon">
+                    <i class="fas fa-cog"></i>
+                </div>
+                <h3 class="card-title">POS Configuration</h3>
+                <p class="card-text">
+                    Configure your POS settings, payment methods, and receipt layout.
+                </p>
+                <a href="{{ url_for('pos.config') }}" class="btn btn-secondary-pos">
+                    <i class="fas fa-cog me-2"></i> Configure
+                </a>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="dashboard-card">
+                <div class="card-icon">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                </div>
+                <h3 class="card-title">Sales Reports</h3>
+                <p class="card-text">
+                    Generate detailed sales reports and analyze your business performance.
+                </p>
+                <a href="{{ url_for('pos.sessions') }}" class="btn btn-secondary-pos">
+                    <i class="fas fa-chart-bar me-2"></i> View Reports
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

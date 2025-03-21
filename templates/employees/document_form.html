@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>{{ title }}</h1>
+            <p class="text-muted">{% if document %}Update{% else %}Upload a new{% endif %} document for {{ employee.full_name }}</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('employees.index') }}">Employees</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('employees.view_employee', employee_id=employee.id) }}">Employee Information</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="{{ url_for('employees.employee_documents', employee_id=employee.id) }}">Documents</a>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data">
+                {{ form.hidden_tag() }}
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Document Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="form-group">
+                                    {{ form.name.label(class="form-label") }}
+                                    {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
+                                    {% for error in form.name.errors %}
+                                        <div class="invalid-feedback">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="form-group">
+                                    {{ form.document_type.label(class="form-label") }}
+                                    {{ form.document_type(class="form-control" + (" is-invalid" if form.document_type.errors else "")) }}
+                                    {% for error in form.document_type.errors %}
+                                        <div class="invalid-feedback">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="form-group">
+                                    {{ form.issue_date.label(class="form-label") }}
+                                    {{ form.issue_date(class="form-control" + (" is-invalid" if form.issue_date.errors else ""), type="date") }}
+                                    {% for error in form.issue_date.errors %}
+                                        <div class="invalid-feedback">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="form-group">
+                                    {{ form.expiry_date.label(class="form-label") }}
+                                    {{ form.expiry_date(class="form-control" + (" is-invalid" if form.expiry_date.errors else ""), type="date") }}
+                                    {% for error in form.expiry_date.errors %}
+                                        <div class="invalid-feedback">{{ error }}</div>
+                                    {% endfor %}
+                                    <small class="form-text text-muted">Leave blank if document has no expiry date</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <div class="form-group">
+                                    {{ form.document_file.label(class="form-label") }}
+                                    {{ form.document_file(class="form-control" + (" is-invalid" if form.document_file.errors else ""), type="file") }}
+                                    {% for error in form.document_file.errors %}
+                                        <div class="invalid-feedback">{{ error }}</div>
+                                    {% endfor %}
+                                    <small class="form-text text-muted">Accepted formats: PDF, JPG, PNG, DOC, DOCX (Max size: 5MB)</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <div class="form-group">
+                                    {{ form.notes.label(class="form-label") }}
+                                    {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""), rows=3) }}
+                                    {% for error in form.notes.errors %}
+                                        <div class="invalid-feedback">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% if document and document.file_path %}
+                        <div class="row mt-3">
+                            <div class="col-md-12">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Current document: 
+                                    <a href="{{ document.file_path }}" target="_blank">View Document</a>
+                                    <br>
+                                    <small>Uploading a new file will replace the current one</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <a href="{{ url_for('employees.employee_documents', employee_id=employee.id) }}" class="btn btn-secondary">Cancel</a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

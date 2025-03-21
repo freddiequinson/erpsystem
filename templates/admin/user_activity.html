@@ -1,0 +1,427 @@
+{% extends 'base.html' %}
+
+{% block title %}User Activity - {{ user.username }}{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pos_unified.css') }}">
+<style>
+    .user-activity {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        padding: 2rem 0;
+    }
+    
+    .activity-header {
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .activity-header h1 {
+        font-weight: 600;
+        color: #4a6cf7;
+        margin-bottom: 0.5rem;
+    }
+    
+    .activity-header p {
+        color: #6c757d;
+        font-size: 1.1rem;
+    }
+    
+    .user-info-card {
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .user-info-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .user-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background-color: #4a6cf7;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        margin-right: 1.5rem;
+    }
+    
+    .user-details h3 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 0.3rem;
+        color: #343a40;
+    }
+    
+    .user-details p {
+        color: #6c757d;
+        margin-bottom: 0.2rem;
+    }
+    
+    .user-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .stat-card {
+        flex: 1;
+        min-width: 200px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-bottom: 0.3rem;
+    }
+    
+    .stat-value {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: #343a40;
+    }
+    
+    .activity-section {
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .section-title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: 1.2rem;
+        color: #343a40;
+        padding-bottom: 0.8rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .activity-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .activity-table th, .activity-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .activity-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        text-align: left;
+    }
+    
+    .activity-table tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .btn-view {
+        padding: 0.3rem 0.6rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        background-color: #4a6cf7;
+        color: white;
+        text-decoration: none;
+    }
+    
+    .btn-view:hover {
+        background-color: #3a5bd9;
+    }
+    
+    .session-card {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .session-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.8rem;
+    }
+    
+    .session-name {
+        font-weight: 600;
+        color: #343a40;
+    }
+    
+    .session-date {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .session-details {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .session-detail {
+        flex: 1;
+        min-width: 150px;
+    }
+    
+    .detail-label {
+        font-size: 0.8rem;
+        color: #6c757d;
+        margin-bottom: 0.2rem;
+    }
+    
+    .detail-value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #343a40;
+    }
+    
+    .nav-tabs {
+        border-bottom: 1px solid #dee2e6;
+        margin-bottom: 1.5rem;
+    }
+    
+    .nav-tabs .nav-link {
+        margin-bottom: -1px;
+        border: 1px solid transparent;
+        border-top-left-radius: 0.25rem;
+        border-top-right-radius: 0.25rem;
+        padding: 0.5rem 1rem;
+        color: #6c757d;
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: #4a6cf7;
+        background-color: #fff;
+        border-color: #dee2e6 #dee2e6 #fff;
+        font-weight: 600;
+    }
+    
+    .tab-content > .tab-pane:not(.active) {
+        display: none;
+    }
+    
+    .tab-content > .active {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container user-activity">
+    <div class="activity-header">
+        <h1>User Activity</h1>
+        <p>Detailed activity report for {{ user.username }}</p>
+    </div>
+    
+    <!-- User Information -->
+    <div class="user-info-card">
+        <div class="user-info-header">
+            <div class="user-avatar">
+                {{ user.username[0]|upper }}
+            </div>
+            <div class="user-details">
+                <h3>{{ user.username }}</h3>
+                <p><i class="fas fa-envelope me-2"></i> {{ user.email }}</p>
+                <p>
+                    <i class="fas fa-user-tag me-2"></i>
+                    {% for role in user.roles %}
+                    <span class="badge bg-primary">{{ role.name }}</span>
+                    {% endfor %}
+                </p>
+                <p>
+                    <i class="fas fa-circle me-2" style="color: {% if user.is_active %}#28a745{% else %}#dc3545{% endif %}"></i>
+                    {{ 'Active' if user.is_active else 'Inactive' }}
+                </p>
+            </div>
+        </div>
+        
+        <div class="user-stats">
+            <div class="stat-card">
+                <div class="stat-label">Total Sales</div>
+                <div class="stat-value">₵{{ "%.2f"|format(total_sales) }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Orders</div>
+                <div class="stat-value">{{ total_orders }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Returns</div>
+                <div class="stat-value">{{ total_returns }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Active Sessions</div>
+                <div class="stat-value">{{ active_sessions|length }}</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Activity Tabs -->
+    <div class="activity-section">
+        <ul class="nav nav-tabs" id="activityTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="orders-tab" data-bs-toggle="tab" data-bs-target="#orders" type="button" role="tab" aria-controls="orders" aria-selected="true">Orders</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="returns-tab" data-bs-toggle="tab" data-bs-target="#returns" type="button" role="tab" aria-controls="returns" aria-selected="false">Returns</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="sessions-tab" data-bs-toggle="tab" data-bs-target="#sessions" type="button" role="tab" aria-controls="sessions" aria-selected="false">Active Sessions</button>
+            </li>
+        </ul>
+        <div class="tab-content" id="activityTabsContent">
+            <!-- Orders Tab -->
+            <div class="tab-pane fade show active" id="orders" role="tabpanel" aria-labelledby="orders-tab">
+                {% if orders %}
+                <table class="activity-table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Date</th>
+                            <th>Customer</th>
+                            <th>Items</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr>
+                            <td>{{ order.name }}</td>
+                            <td>{{ order.order_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ order.customer.name if order.customer else 'Walk-in Customer' }}</td>
+                            <td>{{ order.order_lines|length }}</td>
+                            <td>₵{{ "%.2f"|format(order.total_amount) }}</td>
+                            <td>
+                                {% if order.state == 'paid' %}
+                                <span class="badge bg-success">Paid</span>
+                                {% elif order.state == 'draft' %}
+                                <span class="badge bg-warning">Draft</span>
+                                {% elif order.state == 'cancelled' %}
+                                <span class="badge bg-danger">Cancelled</span>
+                                {% elif order.state == 'refunded' %}
+                                <span class="badge bg-info">Refunded</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('pos.view_order', order_id=order.id) }}" class="btn-view">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="alert alert-info">No orders found for this user.</div>
+                {% endif %}
+            </div>
+            
+            <!-- Returns Tab -->
+            <div class="tab-pane fade" id="returns" role="tabpanel" aria-labelledby="returns-tab">
+                {% if returns %}
+                <table class="activity-table">
+                    <thead>
+                        <tr>
+                            <th>Return ID</th>
+                            <th>Date</th>
+                            <th>Original Order</th>
+                            <th>Items</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for return in returns %}
+                        <tr>
+                            <td>{{ return.name }}</td>
+                            <td>{{ return.return_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ return.order.name if return.order else 'N/A' }}</td>
+                            <td>{{ return.return_lines|length }}</td>
+                            <td>₵{{ "%.2f"|format(return.total_amount) }}</td>
+                            <td>
+                                {% if return.state == 'draft' %}
+                                <span class="badge bg-warning">Draft</span>
+                                {% elif return.state == 'confirmed' %}
+                                <span class="badge bg-success">Confirmed</span>
+                                {% elif return.state == 'cancelled' %}
+                                <span class="badge bg-danger">Cancelled</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('pos.view_return', return_id=return.id) }}" class="btn-view">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="alert alert-info">No returns found for this user.</div>
+                {% endif %}
+            </div>
+            
+            <!-- Sessions Tab -->
+            <div class="tab-pane fade" id="sessions" role="tabpanel" aria-labelledby="sessions-tab">
+                {% if active_sessions %}
+                {% for session in active_sessions %}
+                <div class="session-card">
+                    <div class="session-header">
+                        <div class="session-name">{{ session.name }}</div>
+                        <div class="session-date">Opened on {{ session.start_time.strftime('%Y-%m-%d %H:%M') }}</div>
+                    </div>
+                    <div class="session-details">
+                        <div class="session-detail">
+                            <div class="detail-label">Cash Register</div>
+                            <div class="detail-value">{{ session.cash_register.name }}</div>
+                        </div>
+                        <div class="session-detail">
+                            <div class="detail-label">Opening Balance</div>
+                            <div class="detail-value">₵{{ "%.2f"|format(session.opening_balance) }}</div>
+                        </div>
+                        <div class="session-detail">
+                            <div class="detail-label">Current Balance</div>
+                            <div class="detail-value">₵{{ "%.2f"|format(session.cash_register_balance) }}</div>
+                        </div>
+                        <div class="session-detail">
+                            <div class="detail-label">Status</div>
+                            <div class="detail-value">
+                                <span class="badge bg-success">Active</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <a href="{{ url_for('pos.session_report', session_id=session.id) }}" class="btn-view">
+                            <i class="fas fa-file-alt"></i> View Report
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="alert alert-info">No active sessions found for this user.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="text-center mb-4">
+        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-primary">
+            <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

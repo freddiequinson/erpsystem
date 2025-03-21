@@ -1,0 +1,586 @@
+{% extends 'base.html' %}
+
+{% block title %}Receipt Settings{% endblock %}
+
+{% block styles %}
+<style>
+    .settings-container {
+        padding: 20px;
+    }
+    .card {
+        margin-bottom: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .card-header {
+        background-color: #6c5ce7;
+        color: white;
+        border-radius: 10px 10px 0 0 !important;
+        padding: 15px 20px;
+    }
+    .form-control:focus {
+        border-color: #6c5ce7;
+        box-shadow: 0 0 0 0.2rem rgba(108, 92, 231, 0.25);
+    }
+    .btn-primary {
+        background-color: #6c5ce7;
+        border-color: #6c5ce7;
+    }
+    .btn-primary:hover {
+        background-color: #5f50e6;
+        border-color: #5f50e6;
+    }
+    .form-check-input:checked {
+        background-color: #6c5ce7;
+        border-color: #6c5ce7;
+    }
+    .receipt-preview {
+        background-color: white;
+        border: 1px solid #ddd;
+        padding: 20px;
+        border-radius: 5px;
+        font-family: 'Courier New', monospace;
+        max-width: 300px;
+        margin: 0 auto;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    }
+    .receipt-header, .receipt-footer {
+        text-align: center;
+        padding: 10px 0;
+        border-bottom: 1px dashed #ddd;
+        margin-bottom: 15px;
+    }
+    .receipt-footer {
+        border-bottom: none;
+        border-top: 1px dashed #ddd;
+        margin-top: 15px;
+        margin-bottom: 0;
+    }
+    .receipt-logo {
+        text-align: center;
+        margin-bottom: 10px;
+    }
+    .receipt-items {
+        margin-bottom: 15px;
+    }
+    .receipt-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+    }
+    .receipt-total {
+        border-top: 1px dashed #ddd;
+        padding-top: 10px;
+        display: flex;
+        justify-content: space-between;
+        font-weight: bold;
+    }
+    .receipt-cashier {
+        text-align: center;
+        margin-top: 10px;
+        font-size: 0.9em;
+    }
+    .receipt-tax {
+        margin-top: 10px;
+        font-size: 0.9em;
+    }
+    .nav-tabs .nav-link {
+        color: #6c5ce7;
+    }
+    .nav-tabs .nav-link.active {
+        color: #6c5ce7;
+        font-weight: bold;
+        border-color: #6c5ce7 #6c5ce7 #fff;
+    }
+    .tab-content {
+        padding: 20px;
+        border: 1px solid #dee2e6;
+        border-top: none;
+        border-radius: 0 0 10px 10px;
+    }
+    .preview-controls {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    .preview-controls .form-check {
+        margin-bottom: 10px;
+    }
+    .receipt-barcode, .receipt-qr {
+        text-align: center;
+        margin: 15px 0;
+    }
+    .receipt-barcode img, .receipt-qr img {
+        max-width: 90%;
+        height: auto;
+    }
+    .receipt-customer {
+        margin-bottom: 10px;
+        font-size: 0.9em;
+    }
+    .logo-preview {
+        max-width: 100px;
+        max-height: 100px;
+        margin-top: 10px;
+        border: 1px solid #ddd;
+        padding: 5px;
+    }
+    .custom-file-upload {
+        border: 1px solid #ccc;
+        display: inline-block;
+        padding: 6px 12px;
+        cursor: pointer;
+        border-radius: 4px;
+        background-color: #f8f9fa;
+    }
+    .custom-file-upload:hover {
+        background-color: #e9ecef;
+    }
+    .receipt {
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-family: 'Courier New', monospace;
+        max-width: 300px;
+        margin: 0 auto;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    }
+    .receipt-header {
+        text-align: center;
+        padding: 10px 0;
+        border-bottom: 1px dashed #ddd;
+        margin-bottom: 15px;
+    }
+    .receipt-body {
+        margin-bottom: 15px;
+    }
+    .receipt-items {
+        margin-bottom: 15px;
+    }
+    .receipt-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+    }
+    .receipt-totals {
+        border-top: 1px dashed #ddd;
+        padding-top: 10px;
+        display: flex;
+        flex-direction: column;
+    }
+    .total-line {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+    }
+    .total {
+        font-weight: bold;
+    }
+    .receipt-footer {
+        text-align: center;
+        padding: 10px 0;
+        border-top: 1px dashed #ddd;
+        margin-top: 15px;
+        margin-bottom: 0;
+    }
+    .barcode, .qr-code {
+        text-align: center;
+        margin: 15px 0;
+    }
+    .barcode img, .qr-code img {
+        max-width: 90%;
+        height: auto;
+    }
+    .placeholder-logo {
+        font-size: 24px;
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-receipt me-2"></i> Receipt Settings</h2>
+        <a href="{{ url_for('pos.index') }}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-2"></i> Back to POS
+        </a>
+    </div>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <div class="row">
+        <div class="col-md-7">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Receipt Customization</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="nav nav-tabs" id="myTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="content-tab" data-bs-toggle="tab" data-bs-target="#content" type="button" role="tab" aria-controls="content" aria-selected="true">Content</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="display-tab" data-bs-toggle="tab" data-bs-target="#display" type="button" role="tab" aria-controls="display" aria-selected="false">Display Options</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="advanced-tab" data-bs-toggle="tab" data-bs-target="#advanced" type="button" role="tab" aria-controls="advanced" aria-selected="false">Advanced</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="myTabContent">
+                        <div class="tab-pane fade show active" id="content" role="tabpanel" aria-labelledby="content-tab">
+                            <form method="POST" enctype="multipart/form-data" id="contentForm">
+                                {{ form.hidden_tag() }}
+                                
+                                <div class="mb-3">
+                                    <label for="company_name" class="form-label">Company Name</label>
+                                    {{ form.company_name(class="form-control", id="company_name") }}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="company_address" class="form-label">Company Address</label>
+                                    {{ form.company_address(class="form-control", id="company_address") }}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="company_phone" class="form-label">Company Phone</label>
+                                    {{ form.company_phone(class="form-control", id="company_phone") }}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="company_logo" class="form-label">Company Logo</label>
+                                    <div class="custom-file-upload">
+                                        <label for="company_logo" class="custom-file-label">
+                                            <i class="fas fa-upload"></i> Choose file
+                                        </label>
+                                        {{ form.company_logo(class="form-control-file", id="company_logo", style="display: none;") }}
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="header_text" class="form-label">Header Text</label>
+                                    {{ form.header_text(class="form-control", id="header_text") }}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="footer_text" class="form-label">Footer Text</label>
+                                    {{ form.footer_text(class="form-control", id="footer_text") }}
+                                </div>
+                                
+                                <div class="d-grid">
+                                    {{ form.submit(class="btn btn-primary") }}
+                                </div>
+                            </form>
+                        </div>
+                        <div class="tab-pane fade" id="display" role="tabpanel" aria-labelledby="display-tab">
+                            <form method="POST" enctype="multipart/form-data" id="displayForm">
+                                {{ form.hidden_tag() }}
+                                
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        {{ form.show_logo(class="form-check-input", id="show_logo") }}
+                                        <label class="form-check-label" for="show_logo">{{ form.show_logo.label }}</label>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        {{ form.show_cashier(class="form-check-input", id="show_cashier") }}
+                                        <label class="form-check-label" for="show_cashier">{{ form.show_cashier.label }}</label>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        {{ form.show_tax_details(class="form-check-input", id="show_tax_details") }}
+                                        <label class="form-check-label" for="show_tax_details">{{ form.show_tax_details.label }}</label>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        {{ form.show_customer(class="form-check-input", id="show_customer") }}
+                                        <label class="form-check-label" for="show_customer">{{ form.show_customer.label }}</label>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-grid">
+                                    {{ form.submit(class="btn btn-primary") }}
+                                </div>
+                            </form>
+                        </div>
+                        <div class="tab-pane fade" id="advanced" role="tabpanel" aria-labelledby="advanced-tab">
+                            <form method="POST" enctype="multipart/form-data" id="advancedForm">
+                                {{ form.hidden_tag() }}
+                                
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        {{ form.show_barcode(class="form-check-input", id="show_barcode") }}
+                                        <label class="form-check-label" for="show_barcode">{{ form.show_barcode.label }}</label>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        {{ form.show_qr_code(class="form-check-input", id="show_qr_code") }}
+                                        <label class="form-check-label" for="show_qr_code">{{ form.show_qr_code.label }}</label>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-grid">
+                                    {{ form.submit(class="btn btn-primary") }}
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-5">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Receipt Preview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="receipt-preview">
+                        <div class="receipt">
+                            <div class="receipt-header">
+                                {% if settings.logo_path %}
+                                <img src="{{ url_for('static', filename=settings.logo_path) }}" alt="Company Logo" class="receipt-logo">
+                                {% else %}
+                                <div class="placeholder-logo">
+                                    <i class="fas fa-store"></i>
+                                </div>
+                                {% endif %}
+                                <h2>{{ form.company_name.data or "YOUR COMPANY NAME" }}</h2>
+                                <p>{{ form.company_address.data or "123 Main Street, Accra, Ghana" }}</p>
+                                <p>Tel: {{ form.company_phone.data or "+233 123 456 789" }}</p>
+                                <h3>{{ form.header_text.data or "Thank you for shopping with us!" }}</h3>
+                                <p>Date: {{ current_datetime }}</p>
+                                <p>Receipt #: 1001</p>
+                                <p>Cashier: John Doe</p>
+                                {% if form.show_customer.data %}
+                                <p>Customer: Jane Smith</p>
+                                {% endif %}
+                            </div>
+                            <div class="receipt-body">
+                                <table class="receipt-items">
+                                    <thead>
+                                        <tr>
+                                            <th>Item</th>
+                                            <th>Qty</th>
+                                            <th>Price</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Product 1</td>
+                                            <td>2</td>
+                                            <td>₵10.00</td>
+                                            <td>₵20.00</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Product 2</td>
+                                            <td>1</td>
+                                            <td>₵15.00</td>
+                                            <td>₵15.00</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Product 3</td>
+                                            <td>3</td>
+                                            <td>₵5.00</td>
+                                            <td>₵15.00</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <div class="receipt-totals">
+                                    <div class="total-line">
+                                        <span>Subtotal:</span>
+                                        <span>₵50.00</span>
+                                    </div>
+                                    <div class="total-line">
+                                        <span>Tax (10%):</span>
+                                        <span>₵5.00</span>
+                                    </div>
+                                    <div class="total-line total">
+                                        <span>Total:</span>
+                                        <span>₵55.00</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="receipt-footer">
+                                {% if form.show_barcode.data %}
+                                <div class="barcode">
+                                    <img src="{{ url_for('static', filename='img/barcode-placeholder.png') }}" alt="Barcode">
+                                </div>
+                                {% endif %}
+                                
+                                {% if form.show_qr_code.data %}
+                                <div class="qr-code">
+                                    <img src="{{ url_for('static', filename='img/qr-code-placeholder.png') }}" alt="QR Code">
+                                </div>
+                                {% endif %}
+                                
+                                <p>{{ form.footer_text.data or "Please come again!" }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle file input display
+        document.getElementById('company_logo').addEventListener('change', function(e) {
+            var fileName = e.target.files[0] ? e.target.files[0].name : 'No file selected';
+            document.getElementById('file-selected').textContent = fileName;
+        });
+        
+        // Live preview for header text
+        document.getElementById('header_text').addEventListener('input', function(e) {
+            var headerText = e.target.value || "Thank you for shopping with us!";
+            document.querySelector('.receipt-header h3').textContent = headerText;
+        });
+        
+        // Live preview for footer text
+        document.getElementById('footer_text').addEventListener('input', function(e) {
+            var footerText = e.target.value || "Please come again!";
+            document.querySelector('.receipt-footer p').textContent = footerText;
+        });
+        
+        // Live preview for company name
+        document.getElementById('company_name').addEventListener('input', function(e) {
+            var companyName = e.target.value || "YOUR COMPANY NAME";
+            document.querySelector('.receipt-header h2').textContent = companyName;
+        });
+        
+        // Live preview for company address
+        document.getElementById('company_address').addEventListener('input', function(e) {
+            var companyAddress = e.target.value || "123 Main Street, Accra, Ghana";
+            document.querySelector('.receipt-header p:nth-child(2)').textContent = companyAddress;
+        });
+        
+        // Live preview for company phone
+        document.getElementById('company_phone').addEventListener('input', function(e) {
+            var companyPhone = e.target.value || "+233 123 456 789";
+            document.querySelector('.receipt-header p:nth-child(3)').textContent = "Tel: " + companyPhone;
+        });
+        
+        // Toggle logo visibility
+        document.getElementById('show_logo').addEventListener('change', function(e) {
+            var logoElement = document.querySelector('.receipt-logo');
+            if (e.target.checked) {
+                logoElement.style.display = 'block';
+            } else {
+                logoElement.style.display = 'none';
+            }
+        });
+        
+        // Toggle cashier visibility
+        document.getElementById('show_cashier').addEventListener('change', function(e) {
+            var cashierElement = document.querySelector('.receipt-header p:nth-child(4)');
+            if (e.target.checked) {
+                cashierElement.style.display = 'block';
+            } else {
+                cashierElement.style.display = 'none';
+            }
+        });
+        
+        // Toggle tax details visibility
+        document.getElementById('show_tax_details').addEventListener('change', function(e) {
+            var taxElement = document.querySelector('.receipt-totals .total-line:nth-child(2)');
+            if (e.target.checked) {
+                taxElement.style.display = 'flex';
+            } else {
+                taxElement.style.display = 'none';
+            }
+        });
+        
+        // Toggle barcode visibility
+        document.getElementById('show_barcode').addEventListener('change', function(e) {
+            var barcodeElement = document.querySelector('.barcode');
+            if (e.target.checked) {
+                barcodeElement.style.display = 'block';
+            } else {
+                barcodeElement.style.display = 'none';
+            }
+        });
+        
+        // Toggle QR code visibility
+        document.getElementById('show_qr_code').addEventListener('change', function(e) {
+            var qrElement = document.querySelector('.qr-code');
+            if (e.target.checked) {
+                qrElement.style.display = 'block';
+            } else {
+                qrElement.style.display = 'none';
+            }
+        });
+        
+        // Toggle customer visibility
+        document.getElementById('show_customer').addEventListener('change', function(e) {
+            var customerElement = document.querySelector('.receipt-header p:nth-child(5)');
+            if (e.target.checked) {
+                customerElement.style.display = 'block';
+            } else {
+                customerElement.style.display = 'none';
+            }
+        });
+        
+        // Make sure all forms submit properly
+        document.getElementById('displayForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Copy values from content form
+            document.getElementById('contentForm').querySelector('[name="header_text"]').value = 
+                document.getElementById('header_text').value;
+            document.getElementById('contentForm').querySelector('[name="footer_text"]').value = 
+                document.getElementById('footer_text').value;
+            document.getElementById('contentForm').querySelector('[name="company_name"]').value = 
+                document.getElementById('company_name').value;
+            document.getElementById('contentForm').querySelector('[name="company_address"]').value = 
+                document.getElementById('company_address').value;
+            document.getElementById('contentForm').querySelector('[name="company_phone"]').value = 
+                document.getElementById('company_phone').value;
+            
+            // Submit the content form which has all fields
+            document.getElementById('contentForm').submit();
+        });
+        
+        document.getElementById('advancedForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Copy values from content form
+            document.getElementById('contentForm').querySelector('[name="header_text"]').value = 
+                document.getElementById('header_text').value;
+            document.getElementById('contentForm').querySelector('[name="footer_text"]').value = 
+                document.getElementById('footer_text').value;
+            document.getElementById('contentForm').querySelector('[name="company_name"]').value = 
+                document.getElementById('company_name').value;
+            document.getElementById('contentForm').querySelector('[name="company_address"]').value = 
+                document.getElementById('company_address').value;
+            document.getElementById('contentForm').querySelector('[name="company_phone"]').value = 
+                document.getElementById('company_phone').value;
+            
+            // Submit the content form which has all fields
+            document.getElementById('contentForm').submit();
+        });
+    });
+</script>
+{% endblock %}

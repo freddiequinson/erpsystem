@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+
+{% block title %}POS Sessions{% endblock %}
+
+{% block styles %}
+<style>
+    .sessions-container {
+        padding: 20px;
+    }
+    .card {
+        margin-bottom: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .card-header {
+        background-color: #6c5ce7;
+        color: white;
+        border-radius: 10px 10px 0 0 !important;
+        padding: 15px 20px;
+    }
+    .filter-section {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    .table th {
+        background-color: #f8f9fa;
+    }
+    .badge-status {
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-weight: normal;
+    }
+    .badge-open {
+        background-color: #00b894;
+        color: white;
+    }
+    .badge-closed {
+        background-color: #d63031;
+        color: white;
+    }
+    .session-actions .btn {
+        padding: 5px 10px;
+        margin-right: 5px;
+    }
+    .summary-card {
+        background-color: #f8f9fa;
+        border-left: 4px solid #6c5ce7;
+    }
+    .summary-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #2d3436;
+    }
+    .summary-label {
+        color: #636e72;
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sessions-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-cash-register me-2"></i> POS Sessions</h2>
+        <a href="{{ url_for('pos.index') }}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-2"></i> Back to POS
+        </a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card summary-card">
+                <div class="card-body">
+                    <div class="summary-value">{{ active_sessions }}</div>
+                    <div class="summary-label">Active Sessions</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card summary-card">
+                <div class="card-body">
+                    <div class="summary-value">₵{{ "%.2f"|format(total_sales) }}</div>
+                    <div class="summary-label">Total Sales Today</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card summary-card">
+                <div class="card-body">
+                    <div class="summary-value">{{ total_transactions }}</div>
+                    <div class="summary-label">Transactions Today</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sessions Table -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Session List</h5>
+        </div>
+        <div class="card-body">
+            {% if sessions %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Session #</th>
+                            <th>Start Time</th>
+                            <th>End Time</th>
+                            <th>Cashier</th>
+                            <th>Opening Balance</th>
+                            <th>Closing Balance</th>
+                            <th>Total Sales</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for session in sessions %}
+                        <tr>
+                            <td>{{ session.id }}</td>
+                            <td>{{ session.start_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                {% if session.end_time %}
+                                {{ session.end_time.strftime('%Y-%m-%d %H:%M') }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>{{ session.user.username }}</td>
+                            <td>₵{{ "%.2f"|format(session.opening_balance) }}</td>
+                            <td>
+                                {% if session.closing_balance %}
+                                ₵{{ "%.2f"|format(session.closing_balance) }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>₵{{ "%.2f"|format(session_sales[session.id]) }}</td>
+                            <td>
+                                {% if session.state == 'open' %}
+                                <span class="badge badge-status badge-open">Open</span>
+                                {% else %}
+                                <span class="badge badge-status badge-closed">Closed</span>
+                                {% endif %}
+                            </td>
+                            <td class="session-actions">
+                                {% if session.state == 'open' %}
+                                <a href="{{ url_for('pos.terminal') }}" class="btn btn-sm btn-primary" title="Open Terminal">
+                                    <i class="fas fa-desktop"></i>
+                                </a>
+                                {% if session.user_id == current_user.id or current_user.has_role('Admin') %}
+                                <a href="{{ url_for('pos.close_session', session_id=session.id) }}" class="btn btn-sm btn-warning" title="Close Session">
+                                    <i class="fas fa-door-closed"></i>
+                                </a>
+                                {% endif %}
+                                {% endif %}
+                                
+                                <a href="{{ url_for('pos.session_report', session_id=session.id) }}" class="btn btn-sm btn-info" title="View Report">
+                                    <i class="fas fa-file-alt"></i>
+                                </a>
+                                
+                                <a href="{{ url_for('pos.download_session_report', session_id=session.id, _external=True) }}" class="btn btn-sm btn-success" title="Download Report">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-cash-register fa-3x text-muted mb-3"></i>
+                <h5>No sessions found</h5>
+                <p class="text-muted">Start a new session to begin selling</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

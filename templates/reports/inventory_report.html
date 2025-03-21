@@ -1,0 +1,380 @@
+{% extends 'base.html' %}
+
+{% block title %}Inventory Report{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css">
+<style>
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 20px;
+    }
+    
+    .card {
+        margin-bottom: 20px;
+    }
+    
+    .inventory-stats {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+    }
+    
+    .inventory-stat-card {
+        flex: 1;
+        min-width: 200px;
+        margin: 10px;
+        padding: 15px;
+        border-radius: 5px;
+        text-align: center;
+    }
+    
+    .inventory-stat-card h3 {
+        font-size: 1.5rem;
+        margin-bottom: 5px;
+    }
+    
+    .inventory-stat-card p {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin: 0;
+    }
+    
+    .bg-primary {
+        background-color: #4e73df;
+        color: white;
+    }
+    
+    .bg-success {
+        background-color: #1cc88a;
+        color: white;
+    }
+    
+    .bg-info {
+        background-color: #36b9cc;
+        color: white;
+    }
+    
+    .bg-warning {
+        background-color: #f6c23e;
+        color: white;
+    }
+    
+    .bg-danger {
+        background-color: #e74a3b;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Inventory Report</h1>
+            <p class="text-muted">Monitor your inventory levels and stock movements</p>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Inventory Overview</h5>
+                        <div>
+                            <a href="{{ url_for('reports.index') }}" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Reports
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row inventory-stats">
+                        <div class="col-md-3 inventory-stat-card bg-primary text-white">
+                            <h3>Total Products</h3>
+                            <p>{{ total_products }}</p>
+                        </div>
+                        <div class="col-md-3 inventory-stat-card bg-success text-white">
+                            <h3>Total Inventory Value</h3>
+                            <p>₵{{ "%.2f"|format(total_inventory_value) }}</p>
+                        </div>
+                        <div class="col-md-3 inventory-stat-card bg-warning text-white">
+                            <h3>Low Stock Items</h3>
+                            <p>{{ low_stock_count }}</p>
+                        </div>
+                        <div class="col-md-3 inventory-stat-card bg-danger text-white">
+                            <h3>Out of Stock</h3>
+                            <p>{{ out_of_stock_count }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Top Value Products</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="topValueChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Top Moving Products (Last 30 Days)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="topMovingChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Low Stock Items</h5>
+                </div>
+                <div class="card-body">
+                    {% if low_stock_products %}
+                    <div class="table-responsive">
+                        <table id="lowStockTable" class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Available</th>
+                                    <th>Minimum</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in low_stock_products %}
+                                <tr>
+                                    <td>{{ product.name }}</td>
+                                    <td>{{ product.available_quantity }}</td>
+                                    <td>{{ product.min_stock }}</td>
+                                    <td>
+                                        {% set percentage = (product.available_quantity / product.min_stock * 100)|round if product.min_stock > 0 else 0 %}
+                                        {% if percentage <= 25 %}
+                                            {% set color = "danger" %}
+                                        {% elif percentage <= 50 %}
+                                            {% set color = "warning" %}
+                                        {% else %}
+                                            {% set color = "info" %}
+                                        {% endif %}
+                                        <div class="progress">
+                                            <div class="progress-bar bg-{{ color }}" role="progressbar" 
+                                                style="width:{{ percentage }}%;"
+                                                aria-valuenow="{{ percentage }}" 
+                                                aria-valuemin="0" 
+                                                aria-valuemax="100">
+                                            </div>
+                                        </div>
+                                        <small class="text-{{ color }}">{{ percentage }}%</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i> All products have sufficient stock levels.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Recent Stock Movements</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id="stockMovesTable" class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Product</th>
+                                    <th>From</th>
+                                    <th>To</th>
+                                    <th>Quantity</th>
+                                    <th>Reference</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for move in recent_stock_moves %}
+                                <tr>
+                                    <td>{{ move.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>{{ move.product.name }}</td>
+                                    <td>{{ move.source_location.name }}</td>
+                                    <td>{{ move.destination_location.name }}</td>
+                                    <td>{{ move.quantity }}</td>
+                                    <td>{{ move.reference }}</td>
+                                    <td>
+                                        {% if move.state == 'done' %}
+                                            <span class="badge bg-success">Done</span>
+                                        {% elif move.state == 'draft' %}
+                                            <span class="badge bg-warning">Draft</span>
+                                        {% elif move.state == 'cancelled' %}
+                                            <span class="badge bg-danger">Cancelled</span>
+                                        {% else %}
+                                            <span class="badge bg-info">{{ move.state }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Inventory Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <a href="{{ url_for('inventory.products') }}" class="btn btn-primary w-100">
+                                <i class="fas fa-boxes me-2"></i> Manage Products
+                            </a>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <a href="{{ url_for('inventory.stock_locations') }}" class="btn btn-success w-100">
+                                <i class="fas fa-exchange-alt me-2"></i> Stock Locations
+                            </a>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <button type="button" class="btn btn-info w-100" onclick="window.print()">
+                                <i class="fas fa-print me-2"></i> Print Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Prepare data for charts
+        const topValueLabels = [];
+        const topValueData = [];
+        const topMovingLabels = [];
+        const topMovingData = [];
+        
+        {% for product in top_value_products %}
+        topValueLabels.push("{{ product.name }}");
+        topValueData.push({{ (product.available_quantity * product.cost_price)|round(2) }});
+        {% endfor %}
+        
+        {% for product in top_moving_products %}
+        topMovingLabels.push("{{ product.name }}");
+        topMovingData.push({{ product.quantity_moved }});
+        {% endfor %}
+        
+        // Create the top value products chart
+        const topValueCtx = document.getElementById('topValueChart').getContext('2d');
+        new Chart(topValueCtx, {
+            type: 'bar',
+            data: {
+                labels: topValueLabels,
+                datasets: [{
+                    label: 'Total Value (₵)',
+                    data: topValueData,
+                    backgroundColor: 'rgba(28, 200, 138, 0.8)',
+                    borderColor: 'rgba(28, 200, 138, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '₵' + value;
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'Value: ₵' + context.parsed.y.toFixed(2);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Create the top moving products chart
+        const topMovingCtx = document.getElementById('topMovingChart').getContext('2d');
+        new Chart(topMovingCtx, {
+            type: 'bar',
+            data: {
+                labels: topMovingLabels,
+                datasets: [{
+                    label: 'Quantity Moved',
+                    data: topMovingData,
+                    backgroundColor: 'rgba(54, 185, 204, 0.8)',
+                    borderColor: 'rgba(54, 185, 204, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Initialize DataTable for low stock products
+        $('#lowStockTable').DataTable({
+            order: [[3, 'asc']]
+        });
+        
+        // Initialize DataTable for recent stock movements
+        $('#stockMovesTable').DataTable({
+            order: [[0, 'desc']]
+        });
+    });
+</script>
+{% endblock %}

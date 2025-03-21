@@ -1,0 +1,437 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pos_unified.css') }}">
+<style>
+    .admin-dashboard {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        padding: 2rem 0;
+    }
+    
+    .dashboard-header {
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .dashboard-header h1 {
+        font-weight: 600;
+        color: #4a6cf7;
+        margin-bottom: 0.5rem;
+    }
+    
+    .dashboard-header p {
+        color: #6c757d;
+        font-size: 1.1rem;
+    }
+    
+    .stats-card {
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    }
+    
+    .stats-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stats-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #343a40;
+    }
+    
+    .stats-icon {
+        font-size: 2rem;
+        color: #4a6cf7;
+    }
+    
+    .module-card {
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        padding: 1.5rem;
+        height: 100%;
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+    
+    .module-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    }
+    
+    .module-icon {
+        font-size: 2.5rem;
+        color: #4a6cf7;
+        margin-bottom: 1rem;
+        text-align: center;
+    }
+    
+    .module-title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: 0.8rem;
+        color: #343a40;
+    }
+    
+    .module-desc {
+        color: #6c757d;
+        margin-bottom: 1.2rem;
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+    
+    .btn-module {
+        display: block;
+        width: 100%;
+        padding: 0.6rem;
+        border-radius: 5px;
+        font-weight: 600;
+        text-align: center;
+        transition: all 0.3s;
+        background-color: #4a6cf7;
+        color: white;
+        border: none;
+        text-decoration: none;
+    }
+    
+    .btn-module:hover {
+        background-color: #3a5bd9;
+        transform: translateY(-2px);
+        color: white;
+    }
+    
+    .user-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+    }
+    
+    .user-table th, .user-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .user-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        text-align: left;
+    }
+    
+    .user-table tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .action-btn {
+        padding: 0.3rem 0.6rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        margin-right: 0.3rem;
+    }
+    
+    .btn-edit {
+        background-color: #ffc107;
+        color: #212529;
+    }
+    
+    .btn-delete {
+        background-color: #dc3545;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container admin-dashboard">
+    <div class="dashboard-header">
+        <h1>Admin Dashboard</h1>
+        <p>Manage your entire POS system from one central location</p>
+    </div>
+    
+    <!-- Statistics Overview -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-title">Total Sales (Today)</div>
+                    <div class="stats-value">₵{{ today_sales|default('0.00') }}</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-title">Orders (Today)</div>
+                    <div class="stats-value">{{ today_orders|default('0') }}</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="fas fa-shopping-cart"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-title">Active Sessions</div>
+                    <div class="stats-value">{{ active_sessions|default('0') }}</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="fas fa-cash-register"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-title">Total Users</div>
+                    <div class="stats-value">{{ users|length|default('0') }}</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Modules -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h3 class="mb-3">System Management</h3>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="module-title">User Management</div>
+                <div class="module-desc">
+                    Manage system users, roles, and permissions. Add new users or modify existing ones.
+                </div>
+                <a href="#users-section" class="btn-module">
+                    <i class="fas fa-user-cog me-2"></i> Manage Users
+                </a>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <div class="module-title">Sales Reports</div>
+                <div class="module-desc">
+                    View comprehensive sales reports, analyze trends, and export data for all users.
+                </div>
+                <a href="{{ url_for('pos.orders') }}" class="btn-module">
+                    <i class="fas fa-chart-line me-2"></i> View Reports
+                </a>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="fas fa-box"></i>
+                </div>
+                <div class="module-title">Inventory Management</div>
+                <div class="module-desc">
+                    Monitor stock levels, manage products, and view inventory movements.
+                </div>
+                <a href="{{ url_for('inventory.products') }}" class="btn-module">
+                    <i class="fas fa-boxes me-2"></i> Manage Inventory
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-4 mb-4">
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="fas fa-cash-register"></i>
+                </div>
+                <div class="module-title">POS Sessions</div>
+                <div class="module-desc">
+                    View and manage all active and closed POS sessions across all users.
+                </div>
+                <a href="{{ url_for('pos.sessions') }}" class="btn-module">
+                    <i class="fas fa-cash-register me-2"></i> Manage Sessions
+                </a>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="fas fa-undo-alt"></i>
+                </div>
+                <div class="module-title">Returns Management</div>
+                <div class="module-desc">
+                    View and process returns from all users, and manage return policies.
+                </div>
+                <a href="{{ url_for('pos.returns_report') }}" class="btn-module">
+                    <i class="fas fa-undo me-2"></i> Manage Returns
+                </a>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="fas fa-cog"></i>
+                </div>
+                <div class="module-title">System Settings</div>
+                <div class="module-desc">
+                    Configure system-wide settings, including taxes, discounts, and receipt formats.
+                </div>
+                <a href="{{ url_for('pos.pos_settings') }}" class="btn-module">
+                    <i class="fas fa-cogs me-2"></i> Configure Settings
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- User Management Section -->
+    <div id="users-section" class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">User Management</h3>
+                    <a href="{{ url_for('admin.create_user') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i> Add New User
+                    </a>
+                </div>
+                <div class="card-body">
+                    <table class="user-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Roles</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td>{{ user.id }}</td>
+                                <td>{{ user.username }}</td>
+                                <td>{{ user.email }}</td>
+                                <td>
+                                    {% for role in user.roles %}
+                                    <span class="badge bg-primary">{{ role.name }}</span>
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    {% if user.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn action-btn btn-edit">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </a>
+                                    <button class="btn action-btn btn-delete" data-bs-toggle="modal" data-bs-target="#deleteUserModal{{ user.id }}">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                    
+                                    <!-- Delete User Modal -->
+                                    <div class="modal fade" id="deleteUserModal{{ user.id }}" tabindex="-1" aria-labelledby="deleteUserModalLabel{{ user.id }}" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="deleteUserModalLabel{{ user.id }}">Confirm Delete</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    Are you sure you want to delete user <strong>{{ user.username }}</strong>? This action cannot be undone.
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                    <form action="{{ url_for('admin.delete_user', user_id=user.id) }}" method="post">
+                                                        <button type="submit" class="btn btn-danger">Delete</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Orders Section -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Recent Orders</h3>
+                    <a href="{{ url_for('pos.orders') }}" class="btn btn-primary">View All Orders</a>
+                </div>
+                <div class="card-body">
+                    <table class="user-table">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Date</th>
+                                <th>Customer</th>
+                                <th>Sales Worker</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in recent_orders %}
+                            <tr>
+                                <td>{{ order.name }}</td>
+                                <td>{{ order.order_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>{{ order.customer.name if order.customer else 'Walk-in Customer' }}</td>
+                                <td>{{ order.user.username if order.user else 'Unknown' }}</td>
+                                <td>₵{{ "%.2f"|format(order.total_amount) }}</td>
+                                <td>
+                                    {% if order.state == 'paid' %}
+                                    <span class="badge bg-success">Paid</span>
+                                    {% elif order.state == 'draft' %}
+                                    <span class="badge bg-warning">Draft</span>
+                                    {% elif order.state == 'cancelled' %}
+                                    <span class="badge bg-danger">Cancelled</span>
+                                    {% elif order.state == 'refunded' %}
+                                    <span class="badge bg-info">Refunded</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('pos.view_order', order_id=order.id) }}" class="btn action-btn btn-primary">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

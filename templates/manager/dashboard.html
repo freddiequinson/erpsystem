@@ -1,0 +1,414 @@
+{% extends 'base.html' %}
+
+{% block title %}Manager Dashboard{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pos_unified.css') }}">
+<style>
+    .manager-dashboard {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        padding: 2rem 0;
+    }
+    
+    .dashboard-header {
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .dashboard-header h1 {
+        font-weight: 600;
+        color: #28a745;
+        margin-bottom: 0.5rem;
+    }
+    
+    .dashboard-header p {
+        color: #6c757d;
+        font-size: 1.1rem;
+    }
+    
+    .branch-badge {
+        display: inline-block;
+        background-color: #17a2b8;
+        color: white;
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+    
+    .stats-card {
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    }
+    
+    .stats-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stats-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #343a40;
+    }
+    
+    .stats-icon {
+        font-size: 2rem;
+        color: #28a745;
+    }
+    
+    .module-card {
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        padding: 1.5rem;
+        height: 100%;
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+    
+    .module-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    }
+    
+    .module-icon {
+        font-size: 2.5rem;
+        color: #28a745;
+        margin-bottom: 1rem;
+        text-align: center;
+    }
+    
+    .module-title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: 0.8rem;
+        color: #343a40;
+    }
+    
+    .module-desc {
+        color: #6c757d;
+        margin-bottom: 1.2rem;
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+    
+    .btn-module {
+        display: block;
+        width: 100%;
+        padding: 0.6rem;
+        border-radius: 5px;
+        font-weight: 600;
+        text-align: center;
+        transition: all 0.3s;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        text-decoration: none;
+    }
+    
+    .btn-module:hover {
+        background-color: #218838;
+        transform: translateY(-2px);
+        color: white;
+    }
+    
+    .staff-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+    }
+    
+    .staff-table th, .staff-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .staff-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        text-align: left;
+    }
+    
+    .staff-table tr:hover {
+        background-color: #f8f9fa;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container manager-dashboard">
+    <div class="dashboard-header">
+        <h1>Manager Dashboard</h1>
+        <span class="branch-badge">{{ branch_name }}</span>
+        <p>Overview of sales, staff, and operations</p>
+    </div>
+    
+    <!-- Statistics Overview -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-title">Total Sales (Today)</div>
+                    <div class="stats-value">₵{{ today_sales|default('0.00') }}</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-title">Orders (Today)</div>
+                    <div class="stats-value">{{ today_orders|default('0') }}</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="fas fa-shopping-cart"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-title">Active Sessions</div>
+                    <div class="stats-value">{{ active_sessions|default('0') }}</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="fas fa-cash-register"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-title">Sales Staff</div>
+                    <div class="stats-value">{{ sales_staff|length|default('0') }}</div>
+                </div>
+                <div class="stats-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Modules -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h3 class="mb-3">Management Tools</h3>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <div class="module-title">Sales Reports</div>
+                <div class="module-desc">
+                    View comprehensive sales reports, analyze trends, and monitor performance.
+                </div>
+                <a href="{{ url_for('pos.orders') }}" class="btn-module">
+                    <i class="fas fa-chart-line me-2"></i> View Reports
+                </a>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="fas fa-box"></i>
+                </div>
+                <div class="module-title">Inventory Management</div>
+                <div class="module-desc">
+                    Monitor stock levels, manage products, and view inventory movements.
+                </div>
+                <a href="{{ url_for('inventory.products') }}" class="btn-module">
+                    <i class="fas fa-boxes me-2"></i> Manage Inventory
+                </a>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="fas fa-cash-register"></i>
+                </div>
+                <div class="module-title">POS Sessions</div>
+                <div class="module-desc">
+                    View and manage all active and closed POS sessions across your team.
+                </div>
+                <a href="{{ url_for('pos.sessions') }}" class="btn-module">
+                    <i class="fas fa-cash-register me-2"></i> Manage Sessions
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-4 mb-4">
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <div class="module-title">Employee Reports</div>
+                <div class="module-desc">
+                    Generate comprehensive reports on employee sales, attendance, and productivity.
+                </div>
+                <a href="{{ url_for('manager.sales_worker_dashboard') }}" class="btn-module">
+                    <i class="fas fa-file-alt me-2"></i> View Reports
+                </a>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="fas fa-undo-alt"></i>
+                </div>
+                <div class="module-title">Returns Management</div>
+                <div class="module-desc">
+                    View and process returns from all team members, and manage return policies.
+                </div>
+                <a href="{{ url_for('pos.returns_report') }}" class="btn-module">
+                    <i class="fas fa-undo me-2"></i> Manage Returns
+                </a>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="fas fa-user-check"></i>
+                </div>
+                <div class="module-title">Staff Performance</div>
+                <div class="module-desc">
+                    Monitor individual staff performance, sales targets, and activity.
+                </div>
+                <a href="{{ url_for('manager.staff_performance') }}" class="btn-module">
+                    <i class="fas fa-user-chart me-2"></i> View Performance
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="row mb-4">
+        <div class="col-md-4 mb-4">
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+                <div class="module-title">Shift Management</div>
+                <div class="module-desc">
+                    Manage staff shifts, schedules, and attendance records.
+                </div>
+                <a href="{{ url_for('manager.shift_management') }}" class="btn-module">
+                    <i class="fas fa-calendar-check me-2"></i> Manage Shifts
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sales Staff Section -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">Sales Staff</h3>
+                </div>
+                <div class="card-body">
+                    <table class="staff-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Today's Sales</th>
+                                <th>Orders Today</th>
+                                <th>Active Session</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for staff in sales_staff %}
+                            <tr>
+                                <td>{{ staff.username }}</td>
+                                <td>₵{{ "%.2f"|format(staff.today_sales) }}</td>
+                                <td>{{ staff.today_orders }}</td>
+                                <td>
+                                    {% if staff.active_session %}
+                                    <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('manager.staff_details', user_id=staff.id) }}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-eye"></i> View Details
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Orders Section -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Recent Orders</h3>
+                    <a href="{{ url_for('pos.orders') }}" class="btn btn-primary">View All Orders</a>
+                </div>
+                <div class="card-body">
+                    <table class="staff-table">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Date</th>
+                                <th>Customer</th>
+                                <th>Sales Worker</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in recent_orders %}
+                            <tr>
+                                <td>{{ order.name }}</td>
+                                <td>{{ order.order_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>{{ order.customer.name if order.customer else 'Walk-in Customer' }}</td>
+                                <td>{{ order.user.username if order.user else 'Unknown' }}</td>
+                                <td>₵{{ "%.2f"|format(order.total_amount) }}</td>
+                                <td>
+                                    {% if order.state == 'paid' %}
+                                    <span class="badge bg-success">Paid</span>
+                                    {% elif order.state == 'draft' %}
+                                    <span class="badge bg-warning">Draft</span>
+                                    {% elif order.state == 'cancelled' %}
+                                    <span class="badge bg-danger">Cancelled</span>
+                                    {% elif order.state == 'refunded' %}
+                                    <span class="badge bg-info">Refunded</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('pos.view_order', order_id=order.id) }}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

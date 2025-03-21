@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block title %}POS Discounts{% endblock %}
+
+{% block styles %}
+<style>
+    .discounts-container {
+        padding: 20px;
+    }
+    .card {
+        margin-bottom: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .card-header {
+        background-color: #6c5ce7;
+        color: white;
+        border-radius: 10px 10px 0 0 !important;
+        padding: 15px 20px;
+    }
+    .table th {
+        background-color: #f8f9fa;
+    }
+    .badge-status {
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-weight: normal;
+    }
+    .badge-active {
+        background-color: #00b894;
+        color: white;
+    }
+    .badge-inactive {
+        background-color: #d63031;
+        color: white;
+    }
+    .badge-percentage {
+        background-color: #fdcb6e;
+        color: #333;
+    }
+    .badge-fixed {
+        background-color: #74b9ff;
+        color: white;
+    }
+    .discount-actions .btn {
+        padding: 5px 10px;
+        margin-right: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="discounts-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-percentage me-2"></i> Discounts</h2>
+        <a href="{{ url_for('pos.index') }}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-2"></i> Back to POS
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Discount List</h5>
+            <a href="{{ url_for('pos.new_discount') }}" class="btn btn-sm btn-light">
+                <i class="fas fa-plus me-1"></i> Add New
+            </a>
+        </div>
+        <div class="card-body">
+            {% if discounts %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Value</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for discount in discounts %}
+                        <tr>
+                            <td>{{ discount.id }}</td>
+                            <td>{{ discount.name }}</td>
+                            <td>
+                                {% if discount.discount_type == 'percentage' %}
+                                <span class="badge badge-status badge-percentage">Percentage</span>
+                                {% else %}
+                                <span class="badge badge-status badge-fixed">Fixed Amount</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if discount.discount_type == 'percentage' %}
+                                {{ discount.value }}%
+                                {% else %}
+                                ₵{{ "%.2f"|format(discount.value) }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if discount.is_active %}
+                                <span class="badge badge-status badge-active">Active</span>
+                                {% else %}
+                                <span class="badge badge-status badge-inactive">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td class="discount-actions">
+                                <a href="#" class="btn btn-sm btn-primary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="#" class="btn btn-sm btn-danger" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-percentage fa-3x text-muted mb-3"></i>
+                <h5>No discounts found</h5>
+                <p class="text-muted">Add a discount to offer special prices to your customers</p>
+                <a href="{{ url_for('pos.new_discount') }}" class="btn btn-primary mt-2">
+                    <i class="fas fa-plus me-1"></i> Add Discount
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

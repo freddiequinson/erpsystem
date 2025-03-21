@@ -1,0 +1,488 @@
+{% extends 'base.html' %}
+
+{% block title %}Staff Performance{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pos_unified.css') }}">
+<style>
+    .staff-performance {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        padding: 2rem 0;
+    }
+    
+    .page-header {
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .page-header h1 {
+        font-weight: 600;
+        color: #28a745;
+        margin-bottom: 0.5rem;
+    }
+    
+    .page-header p {
+        color: #6c757d;
+        font-size: 1.1rem;
+    }
+    
+    .content-card {
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .section-title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: 1.2rem;
+        color: #343a40;
+        padding-bottom: 0.8rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .data-table th, .data-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .data-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        text-align: left;
+    }
+    
+    .data-table tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .btn-action {
+        padding: 0.3rem 0.6rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        background-color: #28a745;
+        color: white;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .btn-action:hover {
+        background-color: #218838;
+    }
+    
+    .filter-form {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .filter-group {
+        flex: 1;
+        min-width: 200px;
+    }
+    
+    .filter-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+    
+    .filter-control {
+        display: block;
+        width: 100%;
+        padding: 0.375rem 0.75rem;
+        font-size: 1rem;
+        line-height: 1.5;
+        color: #495057;
+        background-color: #fff;
+        background-clip: padding-box;
+        border: 1px solid #ced4da;
+        border-radius: 0.25rem;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+    
+    .filter-control:focus {
+        color: #495057;
+        background-color: #fff;
+        border-color: #80bdff;
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    
+    .filter-btn {
+        align-self: flex-end;
+    }
+    
+    .chart-container {
+        height: 300px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .performance-metrics {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .metric-card {
+        flex: 1;
+        min-width: 200px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+    }
+    
+    .metric-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-bottom: 0.3rem;
+    }
+    
+    .metric-value {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: #343a40;
+    }
+    
+    .progress-container {
+        margin-top: 0.5rem;
+    }
+    
+    .progress-bar {
+        height: 8px;
+        background-color: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+        width: 100%;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background-color: #28a745;
+        position: absolute;
+        left: 0;
+        top: 0;
+    }
+    
+    .progress-labels {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.8rem;
+        color: #6c757d;
+        margin-top: 0.3rem;
+    }
+    
+    .ranking-card {
+        display: flex;
+        align-items: center;
+        padding: 0.8rem;
+        border-radius: 8px;
+        background-color: #f8f9fa;
+        margin-bottom: 0.8rem;
+    }
+    
+    .ranking-position {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background-color: #28a745;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        margin-right: 1rem;
+    }
+    
+    .ranking-info {
+        flex: 1;
+    }
+    
+    .ranking-name {
+        font-weight: 600;
+        margin-bottom: 0.2rem;
+    }
+    
+    .ranking-value {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .ranking-bar {
+        width: 100px;
+        height: 8px;
+        background-color: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-left: 1rem;
+        position: relative;
+    }
+    
+    .ranking-fill {
+        height: 100%;
+        background-color: #28a745;
+        position: absolute;
+        left: 0;
+        top: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container staff-performance">
+    <div class="page-header">
+        <h1>Staff Performance</h1>
+        <p>Monitor and analyze staff sales performance</p>
+    </div>
+    
+    <!-- Filters -->
+    <div class="content-card">
+        <form action="{{ url_for('manager.staff_performance') }}" method="get" class="filter-form">
+            <div class="filter-group">
+                <label for="date_range" class="filter-label">Date Range</label>
+                <select id="date_range" name="date_range" class="filter-control">
+                    <option value="today" {% if date_range == 'today' %}selected{% endif %}>Today</option>
+                    <option value="yesterday" {% if date_range == 'yesterday' %}selected{% endif %}>Yesterday</option>
+                    <option value="this_week" {% if date_range == 'this_week' %}selected{% endif %}>This Week</option>
+                    <option value="last_week" {% if date_range == 'last_week' %}selected{% endif %}>Last Week</option>
+                    <option value="this_month" {% if date_range == 'this_month' %}selected{% endif %}>This Month</option>
+                    <option value="last_month" {% if date_range == 'last_month' %}selected{% endif %}>Last Month</option>
+                    <option value="custom" {% if date_range == 'custom' %}selected{% endif %}>Custom Range</option>
+                </select>
+            </div>
+            
+            <div class="filter-group" id="custom_date_container" style="display: {% if date_range == 'custom' %}flex{% else %}none{% endif %}; flex-direction: column;">
+                <label class="filter-label">Custom Range</label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="date" name="start_date" class="filter-control" value="{{ start_date }}">
+                    <span style="align-self: center;">to</span>
+                    <input type="date" name="end_date" class="filter-control" value="{{ end_date }}">
+                </div>
+            </div>
+            
+            <div class="filter-group">
+                <label for="metric" class="filter-label">Performance Metric</label>
+                <select id="metric" name="metric" class="filter-control">
+                    <option value="sales_amount" {% if metric == 'sales_amount' %}selected{% endif %}>Sales Amount</option>
+                    <option value="order_count" {% if metric == 'order_count' %}selected{% endif %}>Order Count</option>
+                    <option value="average_order" {% if metric == 'average_order' %}selected{% endif %}>Average Order Value</option>
+                    <option value="items_sold" {% if metric == 'items_sold' %}selected{% endif %}>Items Sold</option>
+                </select>
+            </div>
+            
+            <div class="filter-btn">
+                <button type="submit" class="btn-action">
+                    <i class="fas fa-filter"></i> Apply Filters
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Performance Overview -->
+    <div class="content-card">
+        <h3 class="section-title">Performance Overview</h3>
+        
+        <div class="performance-metrics">
+            <div class="metric-card">
+                <div class="metric-label">Total Sales</div>
+                <div class="metric-value">₵{{ "%.2f"|format(total_sales) }}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Total Orders</div>
+                <div class="metric-value">{{ total_orders }}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Average Order Value</div>
+                <div class="metric-value">₵{{ "%.2f"|format(average_order_value) }}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Total Items Sold</div>
+                <div class="metric-value">{{ total_items_sold }}</div>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="performanceChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Staff Rankings -->
+    <div class="content-card">
+        <h3 class="section-title">Staff Rankings</h3>
+        
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <h4 class="mb-3">Top Performers by Sales</h4>
+                
+                {% for staff in top_sales_staff %}
+                <div class="ranking-card">
+                    <div class="ranking-position">{{ loop.index }}</div>
+                    <div class="ranking-info">
+                        <div class="ranking-name">{{ staff.username }}</div>
+                        <div class="ranking-value">₵{{ "%.2f"|format(staff.sales_amount) }}</div>
+                    </div>
+                    <div class="ranking-bar">
+                        <div class="ranking-fill" style="width: {% if top_sales_staff[0].sales_amount > 0 %}{{ (staff.sales_amount / top_sales_staff[0].sales_amount * 100)|round }}{% else %}0{% endif %}%;"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="col-md-6">
+                <h4 class="mb-3">Top Performers by Orders</h4>
+                
+                {% for staff in top_orders_staff %}
+                <div class="ranking-card">
+                    <div class="ranking-position">{{ loop.index }}</div>
+                    <div class="ranking-info">
+                        <div class="ranking-name">{{ staff.username }}</div>
+                        <div class="ranking-value">{{ staff.order_count }} orders</div>
+                    </div>
+                    <div class="ranking-bar">
+                        <div class="ranking-fill" style="width: {% if top_orders_staff[0].order_count > 0 %}{{ (staff.order_count / top_orders_staff[0].order_count * 100)|round }}{% else %}0{% endif %}%;"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Detailed Performance Table -->
+    <div class="content-card">
+        <h3 class="section-title">Detailed Performance</h3>
+        
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Staff</th>
+                    <th>Sales Amount</th>
+                    <th>Orders</th>
+                    <th>Items Sold</th>
+                    <th>Avg. Order Value</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for staff in staff_performance %}
+                <tr>
+                    <td>{{ staff.username }}</td>
+                    <td>₵{{ "%.2f"|format(staff.sales_amount) }}</td>
+                    <td>{{ staff.order_count }}</td>
+                    <td>{{ staff.items_sold }}</td>
+                    <td>₵{{ "%.2f"|format(staff.average_order) }}</td>
+                    <td>
+                        <a href="{{ url_for('manager.staff_details', user_id=staff.id) }}" class="btn-action">
+                            <i class="fas fa-eye"></i> View Details
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Performance Targets -->
+    <div class="content-card">
+        <h3 class="section-title">Performance Targets</h3>
+        
+        <div class="row">
+            {% for staff in staff_targets %}
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">{{ staff.username }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="progress-container mb-3">
+                            <div class="metric-label">Sales Target</div>
+                            <div class="metric-value">₵{{ "%.2f"|format(staff.sales_amount) }} / ₵{{ "%.2f"|format(staff.sales_target) }}</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: {% if staff.sales_target > 0 %}{{ (staff.sales_amount / staff.sales_target * 100)|round }}{% else %}0{% endif %}%;"></div>
+                            </div>
+                            <div class="progress-labels">
+                                <div>{% if staff.sales_target > 0 %}{{ (staff.sales_amount / staff.sales_target * 100)|round }}{% else %}0{% endif %}%</div>
+                                <div>Target: ₵{{ "%.2f"|format(staff.sales_target) }}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="progress-container">
+                            <div class="metric-label">Orders Target</div>
+                            <div class="metric-value">{{ staff.order_count }} / {{ staff.orders_target }}</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: {% if staff.orders_target > 0 %}{{ (staff.order_count / staff.orders_target * 100)|round }}{% else %}0{% endif %}%;"></div>
+                            </div>
+                            <div class="progress-labels">
+                                <div>{% if staff.orders_target > 0 %}{{ (staff.order_count / staff.orders_target * 100)|round }}{% else %}0{% endif %}%</div>
+                                <div>Target: {{ staff.orders_target }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Date range filter handling
+        const dateRangeSelect = document.getElementById('date_range');
+        const customDateContainer = document.getElementById('custom_date_container');
+        
+        dateRangeSelect.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                customDateContainer.style.display = 'flex';
+            } else {
+                customDateContainer.style.display = 'none';
+            }
+        });
+        
+        // Performance Chart
+        var ctx = document.getElementById('performanceChart').getContext('2d');
+        var performanceChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: {{ staff_names|tojson }},
+                datasets: [{
+                    label: '{{ metric_label }}',
+                    data: {{ performance_data|tojson }},
+                    backgroundColor: 'rgba(40, 167, 69, 0.7)',
+                    borderColor: 'rgba(40, 167, 69, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        {% if metric == 'sales_amount' or metric == 'average_order' %}
+                        ticks: {
+                            callback: function(value) {
+                                return '₵' + value;
+                            }
+                        }
+                        {% endif %}
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

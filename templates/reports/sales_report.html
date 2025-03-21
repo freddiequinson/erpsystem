@@ -1,0 +1,403 @@
+{% extends 'base.html' %}
+
+{% block title %}Sales Report{% endblock %}
+
+{% block styles %}
+<style>
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 20px;
+    }
+    .stat-card {
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .stat-card h2 {
+        margin-bottom: 5px;
+        font-weight: 600;
+    }
+    .stat-card p {
+        color: #6c757d;
+        margin-bottom: 0;
+    }
+    .chart-area {
+        position: relative;
+        height: 250px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Sales Report</h1>
+            <p class="text-muted">Analyze your sales performance</p>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Date Range</h5>
+                        <div>
+                            <a href="{{ url_for('reports.index') }}" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Reports
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="get" action="{{ url_for('reports.sales_report') }}" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="start_date" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="end_date" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">Apply Filter</button>
+                            <a href="{{ url_for('reports.sales_report') }}" class="btn btn-secondary">Clear Filter</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card bg-primary text-white">
+                <h2>₵{{ "%.2f"|format(sales_data.total_sales|float) }}</h2>
+                <p>Net Sales (After Returns)</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card bg-danger text-white">
+                <h2>₵{{ "%.2f"|format(sales_data.total_returns|float) }}</h2>
+                <p>Total Returns</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card bg-success text-white">
+                <h2>{{ sales_data.total_orders }}</h2>
+                <p>Total Orders</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card bg-info text-white">
+                <h2>₵{{ "%.2f"|format(sales_data.avg_order_value|float) }}</h2>
+                <p>Average Order Value</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Daily Sales</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area">
+                        <canvas id="dailySalesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Payment Methods</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="paymentMethodsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Top Selling Products</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="topProductsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Top Products Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Quantity Sold</th>
+                                    <th>Total Sales</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if sales_data.top_products.products %}
+                                    {% for product in sales_data.top_products.products %}
+                                    <tr>
+                                        <td>{{ product.name }}</td>
+                                        <td>{{ product.quantity }}</td>
+                                        <td>₵{{ "%.2f"|format(product.sales|float) }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="3" class="text-center">No product sales data available</td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Parse the sales data from the backend
+        let salesData;
+        try {
+            salesData = JSON.parse('{{ sales_data|tojson|safe }}');
+            console.log("Sales data successfully parsed:", salesData);
+        } catch (e) {
+            console.error("Error parsing sales data:", e);
+            salesData = {
+                daily_sales: { labels: [], values: [], returns: [], net_sales: [] },
+                top_products: { products: [], labels: [], values: [], quantities: [] },
+                payment_methods: { labels: [], values: [] },
+                total_sales: 0,
+                total_orders: 0,
+                avg_order_value: 0,
+                total_returns: 0
+            };
+        }
+        
+        // Create the daily sales chart
+        const dailySalesCtx = document.getElementById('dailySalesChart').getContext('2d');
+        
+        // Check if we have daily sales data
+        if (salesData.daily_sales && salesData.daily_sales.labels && salesData.daily_sales.labels.length > 0 && 
+            salesData.daily_sales.values && salesData.daily_sales.values.some(v => parseFloat(v) > 0)) {
+            
+            console.log("Using real daily sales data:", salesData.daily_sales);
+            
+            // Convert string values to numbers for the chart
+            const dailyLabels = salesData.daily_sales.labels;
+            const dailyValues = salesData.daily_sales.values.map(value => parseFloat(value) || 0);
+            const dailyReturns = salesData.daily_sales.returns.map(value => parseFloat(value) || 0);
+            const dailyNetSales = salesData.daily_sales.net_sales.map(value => parseFloat(value) || 0);
+            
+            new Chart(dailySalesCtx, {
+                type: 'line',
+                data: {
+                    labels: dailyLabels,
+                    datasets: [
+                        {
+                            label: 'Gross Sales (₵)',
+                            data: dailyValues,
+                            fill: false,
+                            borderColor: 'rgb(75, 192, 192)',
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Returns (₵)',
+                            data: dailyReturns,
+                            fill: false,
+                            borderColor: 'rgb(255, 99, 132)',
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Net Sales (₵)',
+                            data: dailyNetSales,
+                            fill: false,
+                            borderColor: 'rgb(54, 162, 235)',
+                            tension: 0.1,
+                            borderWidth: 3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₵' + value;
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const datasetLabel = context.dataset.label || '';
+                                    const value = context.parsed.y;
+                                    return datasetLabel + ': ₵' + value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            console.log("No real daily sales data available");
+            
+            // Display a message when no data is available
+            dailySalesCtx.font = '14px Arial';
+            dailySalesCtx.textAlign = 'center';
+            dailySalesCtx.fillText('No daily sales data available', dailySalesCtx.canvas.width / 2, dailySalesCtx.canvas.height / 2);
+        }
+        
+        // Create the payment methods chart
+        const paymentMethodsCtx = document.getElementById('paymentMethodsChart').getContext('2d');
+        
+        // Check if we have payment methods data
+        if (salesData.payment_methods && salesData.payment_methods.labels && salesData.payment_methods.labels.length > 0) {
+            console.log("Using real payment methods data:", salesData.payment_methods);
+            
+            // Convert string values to numbers for the chart
+            const paymentLabels = salesData.payment_methods.labels;
+            const paymentValues = salesData.payment_methods.values.map(value => parseFloat(value) || 0);
+            
+            // Define colors for payment methods
+            const backgroundColors = ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b'];
+            const hoverBackgroundColors = ['#2e59d9', '#17a673', '#2c9faf', '#dda20a', '#be2617'];
+            
+            new Chart(paymentMethodsCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: paymentLabels,
+                    datasets: [{
+                        data: paymentValues,
+                        backgroundColor: backgroundColors.slice(0, paymentLabels.length),
+                        hoverBackgroundColor: hoverBackgroundColors.slice(0, paymentLabels.length),
+                        hoverBorderColor: "rgba(234, 236, 244, 1)",
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.label + ': ₵' + context.raw;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            console.log("No real payment methods data available");
+            
+            // Display a message when no data is available
+            paymentMethodsCtx.font = '14px Arial';
+            paymentMethodsCtx.textAlign = 'center';
+            paymentMethodsCtx.fillText('No payment methods data available', paymentMethodsCtx.canvas.width / 2, paymentMethodsCtx.canvas.height / 2);
+        }
+        
+        // Create the top products chart with real data
+        const topProductsCtx = document.getElementById('topProductsChart').getContext('2d');
+        
+        // Check if we have top products data
+        if (salesData.top_products && salesData.top_products.labels && salesData.top_products.labels.length > 0) {
+            console.log("Using real top products data:", salesData.top_products);
+            
+            // Convert string values to numbers for the chart
+            const productLabels = salesData.top_products.labels;
+            const productValues = salesData.top_products.values.map(value => parseFloat(value) || 0);
+            
+            new Chart(topProductsCtx, {
+                type: 'bar',
+                data: {
+                    labels: productLabels,
+                    datasets: [{
+                        label: 'Sales Amount (₵)',
+                        data: productValues,
+                        backgroundColor: '#4e73df',
+                        borderColor: '#4e73df',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₵' + value;
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Sales: ₵' + context.parsed.y;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            console.error("No top products data available");
+            // Display a message when no data is available
+            topProductsCtx.font = '14px Arial';
+            topProductsCtx.textAlign = 'center';
+            topProductsCtx.fillText('No product sales data available', topProductsCtx.canvas.width / 2, topProductsCtx.canvas.height / 2);
+        }
+        
+        // Date range picker
+        $('#daterange').daterangepicker({
+            startDate: '{{ start_date }}',
+            endDate: '{{ end_date }}',
+            opens: 'left',
+            locale: {
+                format: 'YYYY-MM-DD'
+            }
+        }, function(start, end, label) {
+            window.location.href = '{{ url_for("reports.sales_report") }}?start_date=' + start.format('YYYY-MM-DD') + '&end_date=' + end.format('YYYY-MM-DD');
+        });
+    });
+</script>
+{% endblock %}

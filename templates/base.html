@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ERP System{% endblock %}</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+    <!-- Custom CSS -->
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            min-height: 100vh;
+            background-color: #343a40;
+            color: white;
+        }
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 0.5rem 1rem;
+            margin: 0.2rem 0;
+            border-radius: 0.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .sidebar .nav-link:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .sidebar .nav-link.active {
+            color: white;
+            background-color: #007bff;
+        }
+        .sidebar .nav-link i.nav-icon {
+            margin-right: 0.5rem;
+        }
+        .content {
+            padding: 20px;
+        }
+        .navbar {
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .card {
+            margin-bottom: 20px;
+            border: none;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
+        }
+        .card-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #eee;
+        }
+        .table th {
+            background-color: #f8f9fa;
+        }
+        /* New styles for improved dropdown */
+        .sidebar-dropdown {
+            padding-left: 2.5rem;
+            background-color: #2c3136;
+            border-radius: 0.25rem;
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.3s ease-out;
+        }
+        .sidebar-dropdown.show {
+            max-height: 1000px;
+            transition: max-height 0.5s ease-in;
+        }
+        .sidebar-dropdown .dropdown-item {
+            color: rgba(255, 255, 255, 0.7);
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            border-radius: 0.25rem;
+            margin: 0.2rem 0;
+            display: block;
+            text-decoration: none;
+        }
+        .sidebar-dropdown .dropdown-item:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .sidebar-dropdown .dropdown-item.active {
+            color: white;
+            background-color: #007bff;
+        }
+        .sidebar-dropdown .dropdown-header {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            padding: 0.5rem 1rem;
+            margin-top: 0.5rem;
+        }
+        .sidebar-dropdown .dropdown-divider {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin: 0.5rem 0;
+        }
+    </style>
+    {% block styles %}{% endblock %}
+</head>
+<body>
+    {% if current_user.is_authenticated %}
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <div class="text-center mb-4">
+                        <h4>ERP System</h4>
+                    </div>
+                    <ul class="nav flex-column">
+                        {% if not current_user.has_role('Sales Worker') %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == '/dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">
+                                <span><i class="fas fa-tachometer-alt nav-icon"></i> Dashboard</span>
+                            </a>
+                        </li>
+                        
+                        <!-- Inventory with dropdown -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if '/inventory' in request.path %}active{% endif %}" href="#" 
+                               data-bs-toggle="collapse" data-bs-target="#collapseInventory" 
+                               aria-expanded="{% if '/inventory' in request.path %}true{% else %}false{% endif %}">
+                                <span><i class="fas fa-boxes nav-icon"></i> Inventory</span>
+                                <i class="fas {% if '/inventory' in request.path %}fa-angle-down{% else %}fa-angle-right{% endif %}"></i>
+                            </a>
+                            <div id="collapseInventory" class="sidebar-dropdown {% if '/inventory' in request.path %}show{% endif %}">
+                                <a class="dropdown-item {% if request.path == '/inventory/products' %}active{% endif %}" 
+                                   href="{{ url_for('inventory.products') }}">Products</a>
+                                <a class="dropdown-item {% if request.path == '/inventory/categories' %}active{% endif %}" 
+                                   href="{{ url_for('inventory.categories') }}">Categories</a>
+                                <a class="dropdown-item {% if request.path == '/inventory/stock_moves' %}active{% endif %}" 
+                                   href="{{ url_for('inventory.stock_moves') }}">Stock Moves</a>
+                                <a class="dropdown-item {% if request.path == '/inventory/warehouses' %}active{% endif %}" 
+                                   href="{{ url_for('inventory.warehouses') }}">Warehouses</a>
+                            </div>
+                        </li>
+                        
+                        <!-- Sales with dropdown -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if '/sales' in request.path %}active{% endif %}" href="#" 
+                               data-bs-toggle="collapse" data-bs-target="#collapseSales" 
+                               aria-expanded="{% if '/sales' in request.path %}true{% else %}false{% endif %}">
+                                <span><i class="fas fa-shopping-cart nav-icon"></i> Sales</span>
+                                <i class="fas {% if '/sales' in request.path %}fa-angle-down{% else %}fa-angle-right{% endif %}"></i>
+                            </a>
+                            <div id="collapseSales" class="sidebar-dropdown {% if '/sales' in request.path %}show{% endif %}">
+                                <a class="dropdown-item {% if request.path == '/sales/' %}active{% endif %}" 
+                                   href="{{ url_for('sales.dashboard') }}">Dashboard</a>
+                                <a class="dropdown-item {% if request.path == '/sales/orders' %}active{% endif %}" 
+                                   href="{{ url_for('sales.orders') }}">Orders</a>
+                                <a class="dropdown-item {% if request.path == '/sales/customers' %}active{% endif %}" 
+                                   href="{{ url_for('sales.customers') }}">Customers</a>
+                                <a class="dropdown-item {% if request.path == '/sales/invoices' %}active{% endif %}" 
+                                   href="{{ url_for('sales.invoices') }}">Invoices</a>
+                            </div>
+                        </li>
+                        
+                        <!-- Purchasing with dropdown - Commented out until implemented -->
+                        <!--
+                        <li class="nav-item">
+                            <a class="nav-link {% if '/purchase' in request.path %}active{% endif %}" href="#" 
+                                data-bs-toggle="collapse" data-bs-target="#collapsePurchase" 
+                                aria-expanded="{% if '/purchase' in request.path %}true{% else %}false{% endif %}" 
+                                aria-controls="collapsePurchase">
+                                <span><i class="fas fa-truck nav-icon"></i> Purchasing</span>
+                                <i class="fas {% if '/purchase' in request.path %}fa-angle-down{% else %}fa-angle-right{% endif %}"></i>
+                            </a>
+                            <div id="collapsePurchase" class="sidebar-dropdown {% if '/purchase' in request.path %}show{% endif %}">
+                                <a class="dropdown-item {% if request.path == '/purchase/dashboard' %}active{% endif %}" 
+                                   href="#">Dashboard</a>
+                                <a class="dropdown-item {% if request.path == '/purchase/orders' %}active{% endif %}" 
+                                   href="#">Purchase Orders</a>
+                                <a class="dropdown-item {% if request.path == '/purchase/suppliers' %}active{% endif %}" 
+                                   href="#">Suppliers</a>
+                                <a class="dropdown-item {% if request.path == '/purchase/receipts' %}active{% endif %}" 
+                                   href="#">Receipts</a>
+                                <a class="dropdown-item {% if request.path == '/purchase/invoices' %}active{% endif %}" 
+                                   href="#">Invoices</a>
+                            </div>
+                        </li>
+                        -->
+                        {% endif %}
+                        
+                        <!-- Point of Sale with dropdown - Always visible for Sales Workers -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if '/pos' in request.path %}active{% endif %}" href="#" 
+                               data-bs-toggle="collapse" data-bs-target="#collapsePOS" 
+                               aria-expanded="{% if '/pos' in request.path %}true{% else %}false{% endif %}">
+                                <span><i class="fas fa-cash-register nav-icon"></i> Point of Sale</span>
+                                <i class="fas {% if '/pos' in request.path %}fa-angle-down{% else %}fa-angle-right{% endif %}"></i>
+                            </a>
+                            <div id="collapsePOS" class="sidebar-dropdown {% if '/pos' in request.path %}show{% endif %}">
+                                <a class="dropdown-item {% if request.path == '/pos/' %}active{% endif %}" 
+                                   href="{{ url_for('pos.index') }}">POS Dashboard</a>
+                                <a class="dropdown-item {% if request.path == '/pos/sessions' %}active{% endif %}" 
+                                   href="{{ url_for('pos.sessions') }}">Sessions</a>
+                                <a class="dropdown-item {% if request.path == '/pos/orders' %}active{% endif %}" 
+                                   href="{{ url_for('pos.orders') }}">Orders</a>
+                                
+                                <div class="dropdown-header">Returns Management</div>
+                                <a class="dropdown-item {% if request.path == '/pos/returns' %}active{% endif %}" 
+                                   href="{{ url_for('pos.returns') }}">Returns</a>
+                                <a class="dropdown-item {% if request.path == '/pos/quality-checks' %}active{% endif %}" 
+                                   href="{{ url_for('pos.quality_checks') }}">Quality Checks</a>
+                                <a class="dropdown-item {% if request.path == '/pos/sequential-quality-checks' %}active{% endif %}" 
+                                   href="{{ url_for('pos.sequential_quality_checks') }}">Sequential QC</a>
+                                <a class="dropdown-item {% if request.path == '/pos/reports/returns' %}active{% endif %}" 
+                                   href="{{ url_for('pos.returns_report') }}">Returns Report</a>
+                                
+                                {% if not current_user.has_role('Sales Worker') %}
+                                <div class="dropdown-header">Configuration</div>
+                                <a class="dropdown-item {% if request.path == '/pos/payment_methods' %}active{% endif %}" 
+                                   href="{{ url_for('pos.payment_methods') }}">Payment Methods</a>
+                                <a class="dropdown-item {% if request.path == '/pos/cash_registers' %}active{% endif %}" 
+                                   href="{{ url_for('pos.cash_registers') }}">Cash Registers</a>
+                                <a class="dropdown-item {% if request.path == '/pos/discounts' %}active{% endif %}" 
+                                   href="{{ url_for('pos.discounts') }}">Discounts</a>
+                                <a class="dropdown-item {% if request.path == '/pos/taxes' %}active{% endif %}" 
+                                   href="{{ url_for('pos.taxes') }}">Taxes</a>
+                                <a class="dropdown-item {% if request.path == '/pos/receipt_settings' %}active{% endif %}" 
+                                   href="{{ url_for('pos.receipt_settings') }}">Receipt Settings</a>
+                                <a class="dropdown-item {% if request.path == '/pos/settings' %}active{% endif %}" 
+                                   href="{{ url_for('pos.pos_settings') }}">POS Settings</a>
+                                <a class="dropdown-item {% if request.path == '/pos/employee_sales' %}active{% endif %}" 
+                                   href="{{ url_for('pos.employee_sales') }}">Employee Sales</a>
+                                {% endif %}
+                            </div>
+                        </li>
+                        
+                        {% if not current_user.has_role('Sales Worker') %}
+                        <!-- Employees with dropdown -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if '/employees' in request.path %}active{% endif %}" href="#" 
+                               data-bs-toggle="collapse" data-bs-target="#collapseEmployees" 
+                               aria-expanded="{% if '/employees' in request.path %}true{% else %}false{% endif %}">
+                                <span><i class="fas fa-users nav-icon"></i> Employees</span>
+                                <i class="fas {% if '/employees' in request.path %}fa-angle-down{% else %}fa-angle-right{% endif %}"></i>
+                            </a>
+                            <div id="collapseEmployees" class="sidebar-dropdown {% if '/employees' in request.path %}show{% endif %}">
+                                <a class="dropdown-item {% if request.path == '/employees/' %}active{% endif %}" 
+                                   href="{{ url_for('employees.index') }}">Directory</a>
+                                <a class="dropdown-item {% if request.path == '/employees/departments' %}active{% endif %}" 
+                                   href="{{ url_for('employees.departments') }}">Departments</a>
+                                <a class="dropdown-item {% if request.path == '/employees/job-positions' %}active{% endif %}" 
+                                   href="{{ url_for('employees.job_positions') }}">Positions</a>
+                                <a class="dropdown-item {% if request.path == '/employees/attendances' %}active{% endif %}" 
+                                   href="{{ url_for('employees.attendances') }}">Attendance</a>
+                                <a class="dropdown-item {% if request.path == '/employees/leaves' %}active{% endif %}" 
+                                   href="{{ url_for('employees.leaves') }}">Leaves</a>
+                                <a class="dropdown-item {% if request.path == '/employees/user_accounts' %}active{% endif %}" 
+                                   href="{{ url_for('employees.user_accounts') }}">User Accounts</a>
+                            </div>
+                        </li>
+                        
+                        <!-- Reports with dropdown -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if '/reports' in request.path %}active{% endif %}" href="#" 
+                               data-bs-toggle="collapse" data-bs-target="#collapseReports" 
+                               aria-expanded="{% if '/reports' in request.path %}true{% else %}false{% endif %}">
+                                <span><i class="fas fa-chart-bar nav-icon"></i> Reports</span>
+                                <i class="fas {% if '/reports' in request.path %}fa-angle-down{% else %}fa-angle-right{% endif %}"></i>
+                            </a>
+                            <div id="collapseReports" class="sidebar-dropdown {% if '/reports' in request.path %}show{% endif %}">
+                                <a class="dropdown-item {% if request.path == '/reports/' %}active{% endif %}" 
+                                   href="{{ url_for('reports.index') }}">Dashboard</a>
+                                <a class="dropdown-item {% if request.path == '/reports/sales' %}active{% endif %}" 
+                                   href="{{ url_for('reports.sales_report') }}">Sales</a>
+                                <a class="dropdown-item {% if request.path == '/reports/inventory' %}active{% endif %}" 
+                                   href="{{ url_for('reports.inventory_report') }}">Inventory</a>
+                                <a class="dropdown-item {% if request.path == '/reports/employee' %}active{% endif %}" 
+                                   href="{{ url_for('manager.sales_worker_dashboard') }}">Employees</a>
+                            </div>
+                        </li>
+                        
+                        <!-- Manager section with dropdown -->
+                        {% if current_user.has_role('Manager') or current_user.has_role('Admin') %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if '/manager' in request.path %}active{% endif %}" href="#" 
+                               data-bs-toggle="collapse" data-bs-target="#collapseManager" 
+                               aria-expanded="{% if '/manager' in request.path %}true{% else %}false{% endif %}">
+                                <span><i class="fas fa-user-tie nav-icon"></i> Management</span>
+                                <i class="fas {% if '/manager' in request.path %}fa-angle-down{% else %}fa-angle-right{% endif %}"></i>
+                            </a>
+                            <div id="collapseManager" class="sidebar-dropdown {% if '/manager' in request.path %}show{% endif %}">
+                                <a class="dropdown-item {% if request.path == '/manager/staff-performance' %}active{% endif %}" 
+                                   href="{{ url_for('manager.staff_performance') }}">Staff Performance</a>
+                                <a class="dropdown-item {% if request.path == '/manager/sales-worker-dashboard' %}active{% endif %}" 
+                                   href="{{ url_for('manager.sales_worker_dashboard') }}">Sales Worker Monitoring</a>
+                            </div>
+                        </li>
+                        {% endif %}
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Main content -->
+            <div class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <!-- Top navbar -->
+                <nav class="navbar navbar-expand-lg navbar-light mb-4">
+                    <div class="container-fluid">
+                        <button class="navbar-toggler d-md-none collapsed" type="button" data-bs-toggle="collapse" data-bs-target=".sidebar">
+                            <span class="navbar-toggler-icon"></span>
+                        </button>
+                        <div class="d-flex align-items-center ms-auto">
+                            <div class="dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-user-circle me-1"></i> {{ current_user.username }}
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i> Profile</a></li>
+                                    <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i> Settings</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt me-2"></i> Logout</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </nav>
+                
+                <!-- Flash messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                
+                <!-- Main content -->
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Flash messages for login/register pages -->
+    <div class="container mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+    
+    <!-- Login/Register content -->
+    {% block auth_content %}{% endblock %}
+    {% endif %}
+    
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

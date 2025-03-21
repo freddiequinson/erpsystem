@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block title %}Activity Log{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Activity Log</h1>
+            <p class="text-muted">Recent system activities and events</p>
+        </div>
+        <div class="col-auto d-flex align-items-center">
+            {% if activities %}
+            <a href="{{ url_for('clear_activities') }}" class="btn btn-danger me-2" onclick="return confirm('Are you sure you want to clear all activities? This action cannot be undone.');">
+                <i class="fas fa-trash me-2"></i> Clear All
+            </a>
+            {% endif %}
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">System Activities</h5>
+        </div>
+        <div class="card-body">
+            {% if activities %}
+                <div class="list-group">
+                    {% for activity in activities %}
+                    <div class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">{{ activity.description }}</h5>
+                            <small class="text-muted">{{ activity.timestamp.strftime('%d/%m/%Y %H:%M') }}</small>
+                        </div>
+                        <p class="mb-1">{{ activity.details }}</p>
+                        <small class="text-muted">
+                            <i class="fas fa-user me-1"></i> {{ activity.user }}
+                            {% if activity.activity_type %}
+                            <span class="ms-3 badge bg-info">{{ activity.activity_type }}</span>
+                            {% endif %}
+                        </small>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                    <p>No activities recorded yet</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>POS Receipt</title>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            width: 80mm; /* Standard thermal receipt width */
+            margin: 0 auto;
+            padding: 5mm;
+            background-color: white;
+        }
+        .receipt {
+            border: 1px dotted #ccc;
+            padding: 5mm;
+            background-color: white;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 5mm;
+        }
+        .company-name {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .info {
+            margin-bottom: 3mm;
+        }
+        .info div {
+            display: flex;
+            justify-content: space-between;
+        }
+        .divider {
+            border-top: 1px dashed #000;
+            margin: 3mm 0;
+        }
+        .items {
+            width: 100%;
+        }
+        .items th {
+            text-align: left;
+            border-bottom: 1px solid #000;
+        }
+        .items td {
+            padding: 1mm 0;
+        }
+        .quantity {
+            text-align: center;
+            width: 15%;
+        }
+        .price {
+            text-align: right;
+            width: 25%;
+        }
+        .totals {
+            margin-top: 3mm;
+        }
+        .totals div {
+            display: flex;
+            justify-content: space-between;
+        }
+        .total {
+            font-weight: bold;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 5mm;
+            font-size: 10px;
+        }
+        .barcode {
+            text-align: center;
+            margin-top: 5mm;
+        }
+        .print-button {
+            display: block;
+            margin: 10mm auto 0;
+            padding: 2mm 5mm;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .print-button:hover {
+            background-color: #0056b3;
+        }
+        @media print {
+            body {
+                width: 80mm;
+                margin: 0;
+                padding: 0;
+            }
+            .receipt {
+                border: none;
+            }
+            .print-button {
+                display: none;
+            }
+        }
+    </style>
+    
+    {% if print_mode %}
+    <style>
+        @media screen {
+            body:after {
+                content: "";
+                display: block;
+                margin-top: 10mm;
+                text-align: center;
+            }
+        }
+    </style>
+    {% endif %}
+</head>
+<body>
+    <div class="receipt">
+        <div class="header">
+            <div class="company-name">TYSONNE ELECTRONICS</div>
+            <div>123 Main Street, Accra, Ghana</div>
+            <div>Tel: +233 123 456 789</div>
+        </div>
+        
+        <div class="info">
+            <div><span>Receipt:</span> <span>{{ order.name }}</span></div>
+            <div><span>Date:</span> <span>{{ order.order_date.strftime('%Y-%m-%d %H:%M') }}</span></div>
+            <div><span>Cashier:</span> <span>{{ order.user.username if order.user else 'Unknown' }}</span></div>
+            {% if order.customer %}
+            <div><span>Customer:</span> <span>{{ order.customer.name }}</span></div>
+            {% endif %}
+        </div>
+        
+        <div class="divider"></div>
+        
+        <table class="items">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th class="quantity">Qty</th>
+                    <th class="price">Price</th>
+                    <th class="price">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for line in order.lines %}
+                <tr>
+                    <td>{{ line.description }}</td>
+                    <td class="quantity">{{ line.quantity }}</td>
+                    <td class="price">₵{{ "%.2f"|format(line.unit_price) }}</td>
+                    <td class="price">₵{{ "%.2f"|format(line.subtotal) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <div class="divider"></div>
+        
+        <div class="totals">
+            <div><span>Subtotal:</span> <span>₵{{ "%.2f"|format(order.total_amount - order.tax_amount) }}</span></div>
+            <div><span>Tax (10%):</span> <span>₵{{ "%.2f"|format(order.tax_amount) }}</span></div>
+            {% if order.discount_amount > 0 %}
+            <div><span>Discount:</span> <span>₵{{ "%.2f"|format(order.discount_amount) }}</span></div>
+            {% endif %}
+            <div class="total"><span>TOTAL:</span> <span>₵{{ "%.2f"|format(order.total_amount) }}</span></div>
+            <div><span>Payment Method:</span> <span>{{ order.payment_method|upper }}</span></div>
+            {% if order.payment_reference %}
+            <div><span>Reference:</span> <span>{{ order.payment_reference }}</span></div>
+            {% endif %}
+        </div>
+        
+        <div class="divider"></div>
+        
+        <div class="footer">
+            <div>Thank you for your purchase!</div>
+            <div>Powered by Tysonne Electronics</div>
+            <div>{{ order.order_date.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+        </div>
+        
+        <div class="barcode">
+            *{{ order.name }}*
+        </div>
+    </div>
+    {% if not print_mode %}
+    <button class="print-button" onclick="window.print();">Print Receipt</button>
+    {% else %}
+    <script>
+        window.onload = function() {
+            window.print();
+        }
+    </script>
+    {% endif %}
+</body>
+</html>

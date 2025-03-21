@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+
+{% block title %}Quality Checks{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Quality Checks</h1>
+            <p class="text-muted">Manage and track quality evaluations for returned products</p>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('pos.returns') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i> Back to Returns
+            </a>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Total Checks</h6>
+                    <h2 class="mb-0">{{ checks|length }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success bg-opacity-10">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Resellable</h6>
+                    <h2 class="mb-0">{{ checks|selectattr('quality_state', 'in', ['pass', 'not_defective'])|list|length }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning bg-opacity-10">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Minor Defects</h6>
+                    <h2 class="mb-0">{{ checks|selectattr('quality_state', 'equalto', 'minor_defect')|list|length }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger bg-opacity-10">
+                <div class="card-body text-center">
+                    <h6 class="text-muted mb-2">Major Defects</h6>
+                    <h2 class="mb-0">{{ checks|selectattr('quality_state', 'equalto', 'major_defect')|list|length }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Quality Checks List</h5>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary" id="toggleFilters">
+                    <i class="fas fa-filter me-1"></i> Filters
+                </button>
+            </div>
+        </div>
+        
+        <div class="card-body bg-light p-3 d-none" id="filterSection">
+            <div class="row">
+                <div class="col-md-3 mb-2">
+                    <select class="form-select form-select-sm" id="resultFilter">
+                        <option value="">All Results</option>
+                        <option value="pass">Pass</option>
+                        <option value="minor_defect">Minor Defect</option>
+                        <option value="major_defect">Major Defect</option>
+                        <option value="not_defective">Not Defective</option>
+                    </select>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <select class="form-select form-select-sm" id="dispositionFilter">
+                        <option value="">All Dispositions</option>
+                        <option value="stock">Return to Stock</option>
+                        <option value="scrap">Scrap/Dispose</option>
+                        <option value="vendor">Return to Vendor</option>
+                        <option value="repair">Send for Repair</option>
+                        <option value="discount_sale">Discount Sale</option>
+                    </select>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <input type="text" class="form-control form-control-sm" id="productFilter" placeholder="Filter by product...">
+                </div>
+                <div class="col-md-3 mb-2">
+                    <button class="btn btn-sm btn-primary" id="applyFilters">Apply Filters</button>
+                    <button class="btn btn-sm btn-outline-secondary" id="resetFilters">Reset</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            {% if checks %}
+            <div class="table-responsive">
+                <table class="table table-hover" id="qualityChecksTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Return Reference</th>
+                            <th>Product</th>
+                            <th>Result</th>
+                            <th>Disposition</th>
+                            <th>Checked By</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for check in checks %}
+                        <tr data-result="{{ check.quality_state }}" data-disposition="{{ check.disposition }}" data-product="{{ check.return_line.product.name if check.return_line and check.return_line.product else '' }}">
+                            <td>{{ check.check_date.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>
+                                {% if check.return_line %}
+                                <a href="{{ url_for('pos.return_detail', return_id=check.return_line.return_id) }}">
+                                    {{ check.return_line.pos_return.name if check.return_line.pos_return else 'Return #' + check.return_line.return_id|string }}
+                                </a>
+                                {% else %}
+                                N/A
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if check.return_line and check.return_line.product %}
+                                {{ check.return_line.product.name }}
+                                {% else %}
+                                Unknown Product
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge {% if check.quality_state == 'pass' %}bg-success{% elif check.quality_state == 'not_defective' %}bg-info{% elif check.quality_state == 'minor_defect' %}bg-warning{% elif check.quality_state == 'major_defect' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                    {{ check.quality_state|replace('_', ' ')|title }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge {% if check.disposition == 'stock' %}bg-success{% elif check.disposition == 'scrap' %}bg-danger{% elif check.disposition == 'repair' %}bg-warning{% elif check.disposition == 'vendor' %}bg-info{% elif check.disposition == 'discount_sale' %}bg-primary{% else %}bg-secondary{% endif %}">
+                                    {{ check.disposition|replace('_', ' ')|title }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if check.checked_by_user %}
+                                {{ check.checked_by_user.username }}
+                                {% else %}
+                                System
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('pos.return_detail', return_id=check.return_line.return_id) if check.return_line else '#' }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i> View Return
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-clipboard-check fa-3x text-muted mb-3"></i>
+                <p>No quality checks found</p>
+                <a href="{{ url_for('pos.returns') }}" class="btn btn-primary">View Returns</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Toggle filters section
+        const toggleFilters = document.getElementById('toggleFilters');
+        const filterSection = document.getElementById('filterSection');
+        
+        if (toggleFilters && filterSection) {
+            toggleFilters.addEventListener('click', function() {
+                filterSection.classList.toggle('d-none');
+            });
+        }
+        
+        // Apply filters
+        const applyFilters = document.getElementById('applyFilters');
+        const resetFilters = document.getElementById('resetFilters');
+        const resultFilter = document.getElementById('resultFilter');
+        const dispositionFilter = document.getElementById('dispositionFilter');
+        const productFilter = document.getElementById('productFilter');
+        const table = document.getElementById('qualityChecksTable');
+        
+        if (applyFilters && resetFilters && table) {
+            applyFilters.addEventListener('click', function() {
+                const rows = table.querySelectorAll('tbody tr');
+                
+                rows.forEach(row => {
+                    let showRow = true;
+                    
+                    // Check result filter
+                    if (resultFilter.value && row.dataset.result !== resultFilter.value) {
+                        showRow = false;
+                    }
+                    
+                    // Check disposition filter
+                    if (dispositionFilter.value && row.dataset.disposition !== dispositionFilter.value) {
+                        showRow = false;
+                    }
+                    
+                    // Check product filter
+                    if (productFilter.value && !row.dataset.product.toLowerCase().includes(productFilter.value.toLowerCase())) {
+                        showRow = false;
+                    }
+                    
+                    row.style.display = showRow ? '' : 'none';
+                });
+            });
+            
+            resetFilters.addEventListener('click', function() {
+                resultFilter.value = '';
+                dispositionFilter.value = '';
+                productFilter.value = '';
+                
+                const rows = table.querySelectorAll('tbody tr');
+                rows.forEach(row => {
+                    row.style.display = '';
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}

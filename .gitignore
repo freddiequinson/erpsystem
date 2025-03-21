@@ -1,0 +1,45 @@
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# SQLite database files
+*.db
+*.sqlite3
+instance/
+
+# Environment variables
+.env
+.flaskenv
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Log files
+*.log
+
+# Temporary files
+tmp/
+temp/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Migration files (if you don't want to include them)
+migrations/versions/
+
+# Uploaded files (if you have any)
+uploads/
+media/
+
+# Fix scripts that shouldn't be in production
+fix_*.py

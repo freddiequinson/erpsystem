@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if user %}Edit User{% else %}Create User{% endif %}{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pos_unified.css') }}">
+<style>
+    .user-form-container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 2rem;
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+    }
+    
+    .form-header {
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .form-header h1 {
+        font-weight: 600;
+        color: #4a6cf7;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #343a40;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ced4da;
+        border-radius: 5px;
+        font-size: 1rem;
+    }
+    
+    .form-control:focus {
+        border-color: #4a6cf7;
+        box-shadow: 0 0 0 0.25rem rgba(74, 108, 247, 0.25);
+    }
+    
+    .form-check {
+        margin-bottom: 1rem;
+    }
+    
+    .btn-submit {
+        background-color: #4a6cf7;
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 5px;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    
+    .btn-submit:hover {
+        background-color: #3a5bd9;
+    }
+    
+    .btn-cancel {
+        background-color: #6c757d;
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 5px;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        margin-right: 1rem;
+    }
+    
+    .btn-cancel:hover {
+        background-color: #5a6268;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container user-form-container">
+    <div class="form-header">
+        <h1>{% if user %}Edit User{% else %}Create New User{% endif %}</h1>
+        <p>{% if user %}Update user information and permissions{% else %}Add a new user to the system{% endif %}</p>
+    </div>
+    
+    <form method="post" action="{% if user %}{{ url_for('admin.edit_user', user_id=user.id) }}{% else %}{{ url_for('admin.create_user') }}{% endif %}">
+        <div class="form-group">
+            <label for="username" class="form-label">Username</label>
+            <input type="text" class="form-control" id="username" name="username" value="{{ user.username if user else '' }}" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="email" name="email" value="{{ user.email if user else '' }}" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="password" class="form-label">Password {% if user %}(Leave blank to keep current password){% endif %}</label>
+            <input type="password" class="form-control" id="password" name="password" {% if not user %}required{% endif %}>
+        </div>
+        
+        <div class="form-group">
+            <label for="role" class="form-label">Role</label>
+            <select class="form-control" id="role" name="role" required>
+                <option value="">Select a role</option>
+                {% for role in roles %}
+                <option value="{{ role.id }}" {% if user and user.roles and role in user.roles %}selected{% endif %}>{{ role.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        {% if user %}
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" {% if user.is_active %}checked{% endif %}>
+            <label class="form-check-label" for="is_active">
+                Active Account
+            </label>
+        </div>
+        {% endif %}
+        
+        <div class="form-group text-center mt-4">
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-cancel">Cancel</a>
+            <button type="submit" class="btn btn-submit">{% if user %}Update User{% else %}Create User{% endif %}</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

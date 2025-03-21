@@ -1,0 +1,450 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ employee.full_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h1>{{ employee.full_name }}</h1>
+        </div>
+        <div class="col-md-6 text-right">
+            <a href="{{ url_for('employees.index') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Employees
+            </a>
+            <a href="{{ url_for('employees.edit_employee', employee_id=employee.id) }}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Edit
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Employee Information Card -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Employee Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <div class="avatar-circle">
+                            <span class="initials">{{ employee.first_name[0] }}{{ employee.last_name[0] }}</span>
+                        </div>
+                        <h4 class="mt-3">{{ employee.full_name }}</h4>
+                        <p class="text-muted">
+                            {{ employee.job_position.name if employee.job_position else 'No Position' }}
+                            {% if employee.department %}
+                            at {{ employee.department.name }}
+                            {% endif %}
+                        </p>
+                        <span class="badge {% if employee.is_active %}badge-success{% else %}badge-secondary{% endif %}">
+                            {% if employee.is_active %}Active{% else %}Inactive{% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="info-item">
+                        <span class="info-label">Employee ID:</span>
+                        <span class="info-value">{{ employee.id }}</span>
+                    </div>
+                    
+                    <div class="info-item">
+                        <span class="info-label">Gender:</span>
+                        <span class="info-value">{{ employee.gender|title }}</span>
+                    </div>
+                    
+                    <div class="info-item">
+                        <span class="info-label">Birth Date:</span>
+                        <span class="info-value">{{ employee.birth_date.strftime('%d %b %Y') if employee.birth_date else 'Not specified' }}</span>
+                    </div>
+                    
+                    <div class="info-item">
+                        <span class="info-label">Hire Date:</span>
+                        <span class="info-value">{{ employee.hire_date.strftime('%d %b %Y') }}</span>
+                    </div>
+                    
+                    <div class="info-item">
+                        <span class="info-label">Manager:</span>
+                        <span class="info-value">
+                            {% if employee.manager %}
+                            <a href="{{ url_for('employees.view_employee', employee_id=employee.manager.id) }}">
+                                {{ employee.manager.full_name }}
+                            </a>
+                            {% else %}
+                            No Manager
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="info-item">
+                        <span class="info-label">User Account:</span>
+                        <span class="info-value">
+                            {% if employee.user %}
+                            {{ employee.user.username }}
+                            {% else %}
+                            No User Account
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Contact Information Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Contact Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="info-item">
+                        <span class="info-label"><i class="fas fa-envelope"></i> Work Email:</span>
+                        <span class="info-value">
+                            {% if employee.work_email %}
+                            <a href="mailto:{{ employee.work_email }}">{{ employee.work_email }}</a>
+                            {% else %}
+                            Not specified
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="info-item">
+                        <span class="info-label"><i class="fas fa-phone"></i> Work Phone:</span>
+                        <span class="info-value">
+                            {% if employee.work_phone %}
+                            <a href="tel:{{ employee.work_phone }}">{{ employee.work_phone }}</a>
+                            {% else %}
+                            Not specified
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="info-item">
+                        <span class="info-label"><i class="fas fa-mobile-alt"></i> Mobile Phone:</span>
+                        <span class="info-value">
+                            {% if employee.mobile_phone %}
+                            <a href="tel:{{ employee.mobile_phone }}">{{ employee.mobile_phone }}</a>
+                            {% else %}
+                            Not specified
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="info-item">
+                        <span class="info-label"><i class="fas fa-map-marker-alt"></i> Address:</span>
+                        <span class="info-value">
+                            {% if employee.address %}
+                            {{ employee.address }}<br>
+                            {% if employee.city or employee.state %}
+                            {{ employee.city }}{% if employee.city and employee.state %}, {% endif %}{{ employee.state }}
+                            {% endif %}
+                            {% if employee.zip_code %}
+                            {{ employee.zip_code }}
+                            {% endif %}
+                            {% if employee.country %}
+                            <br>{{ employee.country }}
+                            {% endif %}
+                            {% else %}
+                            Not specified
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <!-- Tabs for different sections -->
+            <ul class="nav nav-tabs" id="employeeTabs" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" id="leaves-tab" data-toggle="tab" href="#leaves" role="tab">
+                        Leaves
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="documents-tab" data-toggle="tab" href="#documents" role="tab">
+                        Documents
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="attendance-tab" data-toggle="tab" href="#attendance" role="tab">
+                        Attendance
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="notes-tab" data-toggle="tab" href="#notes" role="tab">
+                        Notes
+                    </a>
+                </li>
+            </ul>
+            
+            <div class="tab-content" id="employeeTabContent">
+                <!-- Leaves Tab -->
+                <div class="tab-pane fade show active" id="leaves" role="tabpanel">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Leave Requests</h5>
+                            <a href="{{ url_for('employees.new_leave') }}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-plus"></i> New Leave Request
+                            </a>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Type</th>
+                                            <th>From</th>
+                                            <th>To</th>
+                                            <th>Duration</th>
+                                            <th>Status</th>
+                                            <th>Reason</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for leave in leaves %}
+                                        <tr>
+                                            <td>{{ leave.leave_type.name }}</td>
+                                            <td>{{ leave.start_date.strftime('%d %b %Y') }}</td>
+                                            <td>{{ leave.end_date.strftime('%d %b %Y') }}</td>
+                                            <td>{{ leave.duration }} day(s)</td>
+                                            <td>
+                                                <span class="badge 
+                                                    {% if leave.state == 'approved' %}badge-success
+                                                    {% elif leave.state == 'rejected' %}badge-danger
+                                                    {% else %}badge-warning{% endif %}">
+                                                    {{ leave.state|title }}
+                                                </span>
+                                            </td>
+                                            <td>{{ leave.reason|truncate(30) }}</td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="6" class="text-center">No leave requests found.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <h5 class="mt-4">Leave Allocations</h5>
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Leave Type</th>
+                                            <th>Allocated</th>
+                                            <th>Taken</th>
+                                            <th>Remaining</th>
+                                            <th>Validity</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for allocation in allocations %}
+                                        <tr>
+                                            <td>{{ allocation.leave_type.name }}</td>
+                                            <td>{{ allocation.days_allocated }} day(s)</td>
+                                            <td>{{ allocation.days_taken }} day(s)</td>
+                                            <td>{{ allocation.days_allocated - allocation.days_taken }} day(s)</td>
+                                            <td>
+                                                {% if allocation.expiry_date %}
+                                                Until {{ allocation.expiry_date.strftime('%d %b %Y') }}
+                                                {% else %}
+                                                No expiry
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="5" class="text-center">No leave allocations found.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Documents Tab -->
+                <div class="tab-pane fade" id="documents" role="tabpanel">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Documents</h5>
+                            <a href="{{ url_for('employees.new_document', employee_id=employee.id) }}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-plus"></i> Upload Document
+                            </a>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Type</th>
+                                            <th>Issue Date</th>
+                                            <th>Expiry Date</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for document in documents %}
+                                        <tr>
+                                            <td>{{ document.name }}</td>
+                                            <td>{{ document.document_type|replace('_', ' ')|title }}</td>
+                                            <td>
+                                                {% if document.issue_date %}
+                                                {{ document.issue_date.strftime('%d %b %Y') }}
+                                                {% else %}
+                                                -
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if document.expiry_date %}
+                                                {{ document.expiry_date.strftime('%d %b %Y') }}
+                                                {% else %}
+                                                -
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if document.file_path %}
+                                                <a href="{{ document.file_path }}" target="_blank" class="btn btn-sm btn-info">
+                                                    <i class="fas fa-download"></i>
+                                                </a>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="5" class="text-center">No documents found.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Attendance Tab -->
+                <div class="tab-pane fade" id="attendance" role="tabpanel">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Recent Attendance</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Check In</th>
+                                            <th>Check Out</th>
+                                            <th>Worked Hours</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for attendance in recent_attendances %}
+                                        <tr>
+                                            <td>{{ attendance.check_in.strftime('%d %b %Y') }}</td>
+                                            <td>{{ attendance.check_in.strftime('%H:%M') }}</td>
+                                            <td>
+                                                {% if attendance.check_out %}
+                                                {{ attendance.check_out.strftime('%H:%M') }}
+                                                {% else %}
+                                                -
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if attendance.worked_hours %}
+                                                {{ "%.2f"|format(attendance.worked_hours) }} hours
+                                                {% else %}
+                                                -
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="badge 
+                                                    {% if attendance.state == 'confirmed' %}badge-success
+                                                    {% elif attendance.state == 'draft' %}badge-warning
+                                                    {% else %}badge-secondary{% endif %}">
+                                                    {{ attendance.state|title }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="5" class="text-center">No attendance records found.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Notes Tab -->
+                <div class="tab-pane fade" id="notes" role="tabpanel">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Notes</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if employee.notes %}
+                            <div class="notes-content">
+                                {{ employee.notes|nl2br }}
+                            </div>
+                            {% else %}
+                            <p class="text-center text-muted">No notes available for this employee.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .avatar-circle {
+        width: 100px;
+        height: 100px;
+        background-color: #007bff;
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 0 auto;
+    }
+    
+    .initials {
+        font-size: 42px;
+        color: white;
+        font-weight: bold;
+    }
+    
+    .info-item {
+        margin-bottom: 10px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 10px;
+    }
+    
+    .info-label {
+        font-weight: bold;
+        color: #555;
+        display: block;
+    }
+    
+    .info-value {
+        display: block;
+    }
+    
+    .tab-content .card {
+        border-top-left-radius: 0;
+    }
+    
+    .notes-content {
+        white-space: pre-line;
+    }
+</style>
+{% endblock %}

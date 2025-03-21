@@ -1,0 +1,465 @@
+{% extends 'base.html' %}
+
+{% block title %}Shift Management{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pos_unified.css') }}">
+<style>
+    .shift-management {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        padding: 2rem 0;
+    }
+    
+    .page-header {
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .page-header h1 {
+        font-weight: 600;
+        color: #28a745;
+        margin-bottom: 0.5rem;
+    }
+    
+    .page-header p {
+        color: #6c757d;
+        font-size: 1.1rem;
+    }
+    
+    .content-card {
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .section-title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: 1.2rem;
+        color: #343a40;
+        padding-bottom: 0.8rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .data-table th, .data-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .data-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        text-align: left;
+    }
+    
+    .data-table tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .btn-action {
+        padding: 0.3rem 0.6rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        background-color: #28a745;
+        color: white;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .btn-action:hover {
+        background-color: #218838;
+    }
+    
+    .btn-danger {
+        background-color: #dc3545;
+    }
+    
+    .btn-danger:hover {
+        background-color: #c82333;
+    }
+    
+    .btn-warning {
+        background-color: #ffc107;
+        color: #212529;
+    }
+    
+    .btn-warning:hover {
+        background-color: #e0a800;
+    }
+    
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+    
+    .form-control {
+        display: block;
+        width: 100%;
+        padding: 0.375rem 0.75rem;
+        font-size: 1rem;
+        line-height: 1.5;
+        color: #495057;
+        background-color: #fff;
+        background-clip: padding-box;
+        border: 1px solid #ced4da;
+        border-radius: 0.25rem;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+    
+    .form-control:focus {
+        color: #495057;
+        background-color: #fff;
+        border-color: #80bdff;
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    
+    .calendar-container {
+        margin-bottom: 2rem;
+    }
+    
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    .calendar-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+    }
+    
+    .calendar-nav {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .calendar {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .calendar th {
+        padding: 0.5rem;
+        background-color: #f8f9fa;
+        text-align: center;
+        font-weight: 600;
+    }
+    
+    .calendar td {
+        padding: 0.5rem;
+        border: 1px solid #dee2e6;
+        height: 100px;
+        vertical-align: top;
+    }
+    
+    .calendar .date {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .calendar .shift {
+        font-size: 0.8rem;
+        padding: 0.2rem 0.4rem;
+        margin-bottom: 0.2rem;
+        border-radius: 3px;
+        background-color: #e9ecef;
+    }
+    
+    .calendar .shift-morning {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .calendar .shift-afternoon {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    
+    .calendar .shift-evening {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .calendar .today {
+        background-color: #f8f9fa;
+        border: 2px solid #28a745;
+    }
+    
+    .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1050;
+    }
+    
+    .modal-content {
+        background-color: white;
+        border-radius: 10px;
+        width: 500px;
+        max-width: 90%;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .modal-header {
+        padding: 1rem;
+        border-bottom: 1px solid #dee2e6;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .modal-title {
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+    }
+    
+    .modal-body {
+        padding: 1rem;
+    }
+    
+    .modal-footer {
+        padding: 1rem;
+        border-top: 1px solid #dee2e6;
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container shift-management">
+    <div class="page-header">
+        <h1>Shift Management</h1>
+        <p>Manage staff schedules and shifts</p>
+    </div>
+    
+    <!-- Calendar View -->
+    <div class="content-card">
+        <div class="calendar-header">
+            <div class="calendar-title">{{ month_name }} {{ year }}</div>
+            <div class="calendar-nav">
+                <a href="{{ url_for('manager.shift_management', year=prev_month_year, month=prev_month) }}" class="btn-action">
+                    <i class="fas fa-chevron-left"></i> Previous
+                </a>
+                <a href="{{ url_for('manager.shift_management', year=current_year, month=current_month) }}" class="btn-action">
+                    Today
+                </a>
+                <a href="{{ url_for('manager.shift_management', year=next_month_year, month=next_month) }}" class="btn-action">
+                    Next <i class="fas fa-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+        
+        <div class="calendar-container">
+            <table class="calendar">
+                <thead>
+                    <tr>
+                        <th>Sunday</th>
+                        <th>Monday</th>
+                        <th>Tuesday</th>
+                        <th>Wednesday</th>
+                        <th>Thursday</th>
+                        <th>Friday</th>
+                        <th>Saturday</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for week in calendar_data %}
+                    <tr>
+                        {% for day in week %}
+                        <td {% if day.is_today %}class="today"{% endif %} {% if not day.in_month %}style="background-color: #f8f9fa; color: #adb5bd;"{% endif %}>
+                            <div class="date">{{ day.day }}</div>
+                            {% if day.in_month %}
+                            <div class="shifts">
+                                {% for shift in day.shifts %}
+                                <div class="shift shift-{{ shift.type }}">
+                                    {{ shift.staff_name }} ({{ shift.start_time }} - {{ shift.end_time }})
+                                </div>
+                                {% endfor %}
+                                {% if day.in_month and not day.in_past %}
+                                <a href="{{ url_for('manager.add_shift', year=year, month=month, day=day.day) }}" class="shift" style="background-color: #e2e3e5; text-align: center;">
+                                    <i class="fas fa-plus"></i> Add Shift
+                                </a>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Upcoming Shifts -->
+    <div class="content-card">
+        <h3 class="section-title">Upcoming Shifts</h3>
+        
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Staff</th>
+                    <th>Date</th>
+                    <th>Shift Type</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for shift in upcoming_shifts %}
+                <tr>
+                    <td>{{ shift.staff.username }}</td>
+                    <td>{{ shift.date.strftime('%Y-%m-%d') }}</td>
+                    <td>
+                        {% if shift.shift_type == 'morning' %}
+                        <span class="badge bg-info">Morning</span>
+                        {% elif shift.shift_type == 'afternoon' %}
+                        <span class="badge bg-warning">Afternoon</span>
+                        {% elif shift.shift_type == 'evening' %}
+                        <span class="badge bg-success">Evening</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ shift.start_time.strftime('%H:%M') }}</td>
+                    <td>{{ shift.end_time.strftime('%H:%M') }}</td>
+                    <td>
+                        <a href="{{ url_for('manager.edit_shift', shift_id=shift.id) }}" class="btn-action btn-warning">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <a href="{{ url_for('manager.delete_shift', shift_id=shift.id) }}" class="btn-action btn-danger">
+                            <i class="fas fa-trash"></i> Delete
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Add New Shift -->
+    <div class="content-card">
+        <h3 class="section-title">Add New Shift</h3>
+        
+        <form action="{{ url_for('manager.add_shift_post') }}" method="post">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="staff_id" class="form-label">Staff Member</label>
+                        <select id="staff_id" name="staff_id" class="form-control" required>
+                            <option value="">Select Staff Member</option>
+                            {% for staff in staff_members %}
+                            <option value="{{ staff.id }}">{{ staff.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="shift_date" class="form-label">Shift Date</label>
+                        <input type="date" id="shift_date" name="shift_date" class="form-control" required>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="shift_type" class="form-label">Shift Type</label>
+                        <select id="shift_type" name="shift_type" class="form-control" required>
+                            <option value="morning">Morning (8:00 - 12:00)</option>
+                            <option value="afternoon">Afternoon (12:00 - 16:00)</option>
+                            <option value="evening">Evening (16:00 - 20:00)</option>
+                            <option value="custom">Custom Hours</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="start_time" class="form-label">Start Time</label>
+                        <input type="time" id="start_time" name="start_time" class="form-control" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="end_time" class="form-label">End Time</label>
+                        <input type="time" id="end_time" name="end_time" class="form-control" required>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="notes" class="form-label">Notes</label>
+                <textarea id="notes" name="notes" class="form-control" rows="3"></textarea>
+            </div>
+            
+            <div class="text-end">
+                <button type="submit" class="btn-action">
+                    <i class="fas fa-plus"></i> Add Shift
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const shiftTypeSelect = document.getElementById('shift_type');
+        const startTimeInput = document.getElementById('start_time');
+        const endTimeInput = document.getElementById('end_time');
+        
+        shiftTypeSelect.addEventListener('change', function() {
+            const shiftType = this.value;
+            
+            if (shiftType === 'morning') {
+                startTimeInput.value = '08:00';
+                endTimeInput.value = '12:00';
+            } else if (shiftType === 'afternoon') {
+                startTimeInput.value = '12:00';
+                endTimeInput.value = '16:00';
+            } else if (shiftType === 'evening') {
+                startTimeInput.value = '16:00';
+                endTimeInput.value = '20:00';
+            } else {
+                // Custom - clear the fields
+                startTimeInput.value = '';
+                endTimeInput.value = '';
+            }
+        });
+        
+        // Set default values on page load
+        shiftTypeSelect.dispatchEvent(new Event('change'));
+    });
+</script>
+{% endblock %}
+{% endblock %}

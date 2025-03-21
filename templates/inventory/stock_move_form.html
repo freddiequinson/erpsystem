@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>{{ title }}</h1>
+    
+    <div class="card">
+        <div class="card-body">
+            <form method="POST" action="">
+                {{ form.hidden_tag() }}
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form.product_id.label(class="form-control-label") }}
+                        {{ form.product_id(class="form-control") }}
+                        {% if form.product_id.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.product_id.errors %}
+                                    <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.quantity.label(class="form-control-label") }}
+                        {{ form.quantity(class="form-control") }}
+                        {% if form.quantity.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.quantity.errors %}
+                                    <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        {{ form.source_location_id.label(class="form-control-label") }}
+                        {{ form.source_location_id(class="form-control") }}
+                        {% if form.source_location_id.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.source_location_id.errors %}
+                                    <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.destination_location_id.label(class="form-control-label") }}
+                        {{ form.destination_location_id(class="form-control") }}
+                        {% if form.destination_location_id.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.destination_location_id.errors %}
+                                    <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="form-group mb-3">
+                    {{ form.reference.label(class="form-label") }}
+                    {{ form.reference(class="form-control") }}
+                    {% if form.reference.errors %}
+                        <div class="text-danger">
+                            {% for error in form.reference.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group mb-3">
+                    {{ form.reference_type.label(class="form-label") }}
+                    {{ form.reference_type(class="form-control") }}
+                    {% if form.reference_type.errors %}
+                        <div class="text-danger">
+                            {% for error in form.reference_type.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group mb-3">
+                    {{ form.scheduled_date.label(class="form-label") }}
+                    {{ form.scheduled_date(class="form-control") }}
+                    {% if form.scheduled_date.errors %}
+                        <div class="text-danger">
+                            {% for error in form.scheduled_date.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    {{ form.submit(class="btn btn-primary") }}
+                    <a href="{{ url_for('inventory.stock_moves') }}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Initialize select2 for dropdowns
+        $('#product_id').select2({
+            placeholder: 'Select a product',
+            allowClear: true
+        });
+        
+        $('#source_location_id').select2({
+            placeholder: 'Select source location',
+            allowClear: true
+        });
+        
+        $('#destination_location_id').select2({
+            placeholder: 'Select destination location',
+            allowClear: true
+        });
+        
+        // Initialize datepicker for scheduled date
+        $('#scheduled_date').datepicker({
+            format: 'yyyy-mm-dd',
+            autoclose: true,
+            todayHighlight: true
+        });
+        
+        // Form submission validation
+        $('form').on('submit', function(e) {
+            // Ensure select2 values are properly set in the form
+            $('#product_id, #source_location_id, #destination_location_id').each(function() {
+                var selectElement = $(this);
+                if (selectElement.val()) {
+                    // Force the select2 value into the actual form element
+                    selectElement.attr('selected', true);
+                }
+            });
+            
+            // Basic validation
+            var source = $('#source_location_id').val();
+            var dest = $('#destination_location_id').val();
+            var product = $('#product_id').val();
+            var quantity = $('#quantity').val();
+            
+            if (!source || !dest || !product || !quantity) {
+                e.preventDefault();
+                alert('Please fill in all required fields');
+                return false;
+            }
+            
+            // Log form data for debugging
+            console.log("Form data on submit:", {
+                product: product,
+                source: source,
+                destination: dest,
+                quantity: quantity
+            });
+            
+            return true;
+        });
+    });
+</script>
+{% endblock %}

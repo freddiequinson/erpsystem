@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+
+{% block title %}Reports Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Reports Dashboard</h1>
+            <p class="text-muted">View and analyze your business performance</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-chart-line fa-4x text-primary mb-3"></i>
+                    <h3>Sales Reports</h3>
+                    <p class="text-muted">Analyze your sales performance, top products, and payment methods</p>
+                    <a href="{{ url_for('reports.sales_report') }}" class="btn btn-primary">View Sales Reports</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-boxes fa-4x text-success mb-3"></i>
+                    <h3>Inventory Reports</h3>
+                    <p class="text-muted">Monitor inventory levels, stock movements, and product performance</p>
+                    <a href="{{ url_for('reports.inventory_report') }}" class="btn btn-success">View Inventory Reports</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-users fa-4x text-info mb-3"></i>
+                    <h3>Employee Reports</h3>
+                    <p class="text-muted">Track employee performance, sales, and productivity metrics in the Management Dashboard</p>
+                    <a href="{{ url_for('manager.sales_worker_dashboard') }}" class="btn btn-info">
+                        <i class="fas fa-external-link-alt me-2"></i>Go to Sales Worker Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Quick Stats</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Today's Net Sales</h5>
+                                    <h3 class="mb-0">₵{{ "%.2f"|format(today_sales) }}</h3>
+                                    <small>After Returns</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-danger text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Today's Returns</h5>
+                                    <h3 class="mb-0">₵{{ "%.2f"|format(today_returns) }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Monthly Net Sales</h5>
+                                    <h3 class="mb-0">₵{{ "%.2f"|format(monthly_sales) }}</h3>
+                                    <small>After Returns</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-warning text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Monthly Returns</h5>
+                                    <h3 class="mb-0">₵{{ "%.2f"|format(monthly_returns) }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Total Orders</h5>
+                                    <h3 class="mb-0">{{ total_orders }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-secondary text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Low Stock Items</h5>
+                                    <h3 class="mb-0">{{ low_stock_count }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}

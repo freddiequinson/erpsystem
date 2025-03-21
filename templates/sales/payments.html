@@ -1,0 +1,277 @@
+{% extends 'base.html' %}
+
+{% block title %}Payments{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Payments</h1>
+            <p class="text-muted">Track and manage customer payments</p>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('sales.invoices') }}" class="btn btn-outline-primary me-2">
+                <i class="fas fa-file-invoice"></i> Invoices
+            </a>
+            <div class="btn-group">
+                <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-plus"></i> New Payment
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><h6 class="dropdown-header">Select invoice</h6></li>
+                    {% if open_invoices %}
+                        {% for invoice in open_invoices %}
+                        <li><a class="dropdown-item" href="{{ url_for('sales.new_payment', invoice_id=invoice.id) }}">{{ invoice.name }} - {{ invoice.customer.name }}</a></li>
+                        {% endfor %}
+                    {% else %}
+                        <li><span class="dropdown-item disabled">No open invoices</span></li>
+                    {% endif %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{{ url_for('sales.new_invoice') }}">Create New Invoice</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Payment History</h5>
+            <div class="d-flex">
+                <div class="input-group input-group-sm me-2" style="width: 250px;">
+                    <input type="text" class="form-control" id="paymentSearch" placeholder="Search payments...">
+                    <button class="btn btn-outline-secondary" type="button">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-filter"></i> Filter
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="filterDropdown">
+                        <li><a class="dropdown-item" href="{{ url_for('sales.payments', status='all') }}">All Payments</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ url_for('sales.payments', status='draft') }}">Draft</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('sales.payments', status='posted') }}">Posted</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('sales.payments', status='cancelled') }}">Cancelled</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ url_for('sales.payments', method='cash') }}">Cash</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('sales.payments', method='bank_transfer') }}">Bank Transfer</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('sales.payments', method='credit_card') }}">Credit Card</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('sales.payments', method='check') }}">Check</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('sales.payments', method='other') }}">Other</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if payments %}
+                <div class="table-responsive">
+                    <table class="table table-hover" id="paymentsTable">
+                        <thead>
+                            <tr>
+                                <th>Payment #</th>
+                                <th>Date</th>
+                                <th>Invoice</th>
+                                <th>Customer</th>
+                                <th>Method</th>
+                                <th>Reference</th>
+                                <th>Status</th>
+                                <th class="text-end">Amount</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payment in payments %}
+                            <tr>
+                                <td>{{ payment.name }}</td>
+                                <td>{{ payment.payment_date.strftime('%Y-%m-%d') }}</td>
+                                <td>
+                                    <a href="{{ url_for('sales.edit_invoice', invoice_id=payment.invoice_id) }}">
+                                        {{ payment.invoice.name }}
+                                    </a>
+                                </td>
+                                <td>{{ payment.invoice.customer.name }}</td>
+                                <td>
+                                    {% if payment.payment_method == 'cash' %}
+                                        <span class="badge bg-success">Cash</span>
+                                    {% elif payment.payment_method == 'bank_transfer' %}
+                                        <span class="badge bg-info">Bank Transfer</span>
+                                    {% elif payment.payment_method == 'credit_card' %}
+                                        <span class="badge bg-primary">Credit Card</span>
+                                    {% elif payment.payment_method == 'check' %}
+                                        <span class="badge bg-secondary">Check</span>
+                                    {% else %}
+                                        <span class="badge bg-dark">{{ payment.payment_method }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ payment.reference or '-' }}</td>
+                                <td>
+                                    {% if payment.state == 'draft' %}
+                                        <span class="badge bg-secondary">Draft</span>
+                                    {% elif payment.state == 'posted' %}
+                                        <span class="badge bg-success">Posted</span>
+                                    {% elif payment.state == 'cancelled' %}
+                                        <span class="badge bg-danger">Cancelled</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">₵{{ payment.amount|round(2) }}</td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        {% if payment.state == 'draft' %}
+                                        <button type="button" class="btn btn-outline-success" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#postPaymentModal" 
+                                                data-payment-id="{{ payment.id }}"
+                                                data-payment-name="{{ payment.name }}">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#cancelPaymentModal" 
+                                                data-payment-id="{{ payment.id }}"
+                                                data-payment-name="{{ payment.name }}">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                        {% endif %}
+                                        <button type="button" class="btn btn-outline-secondary" title="Print Receipt">
+                                            <i class="fas fa-print"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <p class="text-muted">No payments found</p>
+                    <a href="{{ url_for('sales.invoices') }}" class="btn btn-primary">View Invoices</a>
+                </div>
+            {% endif %}
+        </div>
+        {% if payments %}
+        <div class="card-footer">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <small class="text-muted">Showing {{ payments|length }} payment(s)</small>
+                </div>
+                <nav aria-label="Payment pagination">
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                        </li>
+                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Post Payment Modal -->
+<div class="modal fade" id="postPaymentModal" tabindex="-1" aria-labelledby="postPaymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="postPaymentModalLabel">Confirm Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to post payment <strong id="paymentNameToPost"></strong>?</p>
+                <p>This will finalize the payment and update the invoice balance.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <form id="postPaymentForm" method="POST">
+                    <button type="submit" class="btn btn-success">Post Payment</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Payment Modal -->
+<div class="modal fade" id="cancelPaymentModal" tabindex="-1" aria-labelledby="cancelPaymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cancelPaymentModalLabel">Confirm Cancellation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to cancel payment <strong id="paymentNameToCancel"></strong>?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <form id="cancelPaymentForm" method="POST">
+                    <button type="submit" class="btn btn-danger">Cancel Payment</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Payment search functionality
+        const searchInput = document.getElementById('paymentSearch');
+        if (searchInput) {
+            searchInput.addEventListener('keyup', function() {
+                const searchTerm = this.value.toLowerCase();
+                const table = document.getElementById('paymentsTable');
+                const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+                
+                for (let i = 0; i < rows.length; i++) {
+                    const paymentNum = rows[i].getElementsByTagName('td')[0].textContent.toLowerCase();
+                    const invoice = rows[i].getElementsByTagName('td')[2].textContent.toLowerCase();
+                    const customer = rows[i].getElementsByTagName('td')[3].textContent.toLowerCase();
+                    const reference = rows[i].getElementsByTagName('td')[5].textContent.toLowerCase();
+                    
+                    if (paymentNum.includes(searchTerm) || 
+                        invoice.includes(searchTerm) || 
+                        customer.includes(searchTerm) ||
+                        reference.includes(searchTerm)) {
+                        rows[i].style.display = '';
+                    } else {
+                        rows[i].style.display = 'none';
+                    }
+                }
+            });
+        }
+        
+        // Post payment modal
+        const postPaymentModal = document.getElementById('postPaymentModal');
+        if (postPaymentModal) {
+            postPaymentModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const paymentId = button.getAttribute('data-payment-id');
+                const paymentName = button.getAttribute('data-payment-name');
+                
+                document.getElementById('paymentNameToPost').textContent = paymentName;
+                document.getElementById('postPaymentForm').action = `/sales/payments/${paymentId}/post`;
+            });
+        }
+        
+        // Cancel payment modal
+        const cancelPaymentModal = document.getElementById('cancelPaymentModal');
+        if (cancelPaymentModal) {
+            cancelPaymentModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const paymentId = button.getAttribute('data-payment-id');
+                const paymentName = button.getAttribute('data-payment-name');
+                
+                document.getElementById('paymentNameToCancel').textContent = paymentName;
+                document.getElementById('cancelPaymentForm').action = `/sales/payments/${paymentId}/cancel`;
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if supplier %}Edit Supplier{% else %}New Supplier{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>{% if supplier %}Edit Supplier{% else %}New Supplier{% endif %}</h1>
+            <p class="text-muted">{% if supplier %}Update supplier information{% else %}Add a new supplier to your system{% endif %}</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Supplier Information</h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {{ form.hidden_tag() }}
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="name" class="form-label">Supplier Name *</label>
+                        {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""), placeholder="Enter supplier name") }}
+                        {% if form.name.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.name.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="contact_name" class="form-label">Contact Person</label>
+                        {{ form.contact_name(class="form-control" + (" is-invalid" if form.contact_name.errors else ""), placeholder="Enter contact person name") }}
+                        {% if form.contact_name.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.contact_name.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="email" class="form-label">Email</label>
+                        {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), placeholder="Enter email address") }}
+                        {% if form.email.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.email.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="phone" class="form-label">Phone</label>
+                        {{ form.phone(class="form-control" + (" is-invalid" if form.phone.errors else ""), placeholder="Enter phone number") }}
+                        {% if form.phone.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.phone.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="address" class="form-label">Address</label>
+                    {{ form.address(class="form-control" + (" is-invalid" if form.address.errors else ""), placeholder="Enter street address") }}
+                    {% if form.address.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.address.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="city" class="form-label">City</label>
+                        {{ form.city(class="form-control" + (" is-invalid" if form.city.errors else ""), placeholder="Enter city") }}
+                        {% if form.city.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.city.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label for="state" class="form-label">State/Province</label>
+                        {{ form.state(class="form-control" + (" is-invalid" if form.state.errors else ""), placeholder="Enter state or province") }}
+                        {% if form.state.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.state.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label for="zip_code" class="form-label">Postal/ZIP Code</label>
+                        {{ form.zip_code(class="form-control" + (" is-invalid" if form.zip_code.errors else ""), placeholder="Enter postal or ZIP code") }}
+                        {% if form.zip_code.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.zip_code.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="country" class="form-label">Country</label>
+                        {{ form.country(class="form-control" + (" is-invalid" if form.country.errors else ""), placeholder="Enter country") }}
+                        {% if form.country.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.country.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="website" class="form-label">Website</label>
+                        {{ form.website(class="form-control" + (" is-invalid" if form.website.errors else ""), placeholder="Enter website URL") }}
+                        {% if form.website.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.website.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="tax_id" class="form-label">Tax ID</label>
+                    {{ form.tax_id(class="form-control" + (" is-invalid" if form.tax_id.errors else ""), placeholder="Enter tax ID or VAT number") }}
+                    {% if form.tax_id.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.tax_id.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="notes" class="form-label">Notes</label>
+                    {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""), rows=3, placeholder="Enter additional notes about this supplier") }}
+                    {% if form.notes.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.notes.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3 form-check">
+                    {{ form.is_active(class="form-check-input" + (" is-invalid" if form.is_active.errors else "")) }}
+                    <label class="form-check-label" for="is_active">Active</label>
+                    {% if form.is_active.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.is_active.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="d-flex justify-content-end">
+                    <a href="{{ url_for('purchase.suppliers') }}" class="btn btn-secondary me-2">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Select2 for better dropdown experience if available
+        if (typeof $.fn.select2 !== 'undefined') {
+            $('#country').select2({
+                theme: 'bootstrap-5',
+                placeholder: 'Select a country'
+            });
+        }
+    });
+</script>
+{% endblock %}

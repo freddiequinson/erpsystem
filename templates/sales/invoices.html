@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+
+{% block title %}Invoices{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Invoices</h1>
+            <p class="text-muted">Manage customer invoices and payments</p>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('sales.new_invoice') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> New Invoice
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Invoices</h5>
+            <div class="d-flex">
+                <div class="input-group input-group-sm me-2" style="width: 250px;">
+                    <input type="text" class="form-control" id="invoiceSearch" placeholder="Search invoices...">
+                    <button class="btn btn-outline-secondary" type="button">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-filter"></i> Filter
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="filterDropdown">
+                        <li><a class="dropdown-item" href="{{ url_for('sales.invoices', status='all') }}">All Invoices</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ url_for('sales.invoices', status='draft') }}">Draft</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('sales.invoices', status='open') }}">Open</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('sales.invoices', status='paid') }}">Paid</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('sales.invoices', status='cancelled') }}">Cancelled</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ url_for('sales.invoices', status='overdue') }}">Overdue</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if invoices %}
+                <div class="table-responsive">
+                    <table class="table table-hover" id="invoicesTable">
+                        <thead>
+                            <tr>
+                                <th>Invoice #</th>
+                                <th>Date</th>
+                                <th>Customer</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th class="text-end">Total</th>
+                                <th class="text-end">Due Amount</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for invoice in invoices %}
+                            <tr class="{% if invoice.state == 'open' and invoice.due_date < now %}table-danger{% endif %}">
+                                <td>
+                                    <a href="{{ url_for('sales.edit_invoice', invoice_id=invoice.id) }}">
+                                        {{ invoice.name }}
+                                    </a>
+                                </td>
+                                <td>{{ invoice.invoice_date.strftime('%Y-%m-%d') }}</td>
+                                <td>{{ invoice.customer.name }}</td>
+                                <td>{{ invoice.due_date.strftime('%Y-%m-%d') }}</td>
+                                <td>
+                                    {% if invoice.state == 'draft' %}
+                                        <span class="badge bg-secondary">Draft</span>
+                                    {% elif invoice.state == 'open' %}
+                                        {% if invoice.due_date < now %}
+                                            <span class="badge bg-danger">Overdue</span>
+                                        {% else %}
+                                            <span class="badge bg-primary">Open</span>
+                                        {% endif %}
+                                    {% elif invoice.state == 'paid' %}
+                                        <span class="badge bg-success">Paid</span>
+                                    {% elif invoice.state == 'cancelled' %}
+                                        <span class="badge bg-danger">Cancelled</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">₵{{ invoice.total_amount|round(2) }}</td>
+                                <td class="text-end">₵{{ invoice.amount_due|round(2) }}</td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{{ url_for('sales.edit_invoice', invoice_id=invoice.id) }}" class="btn btn-outline-primary">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        {% if invoice.state == 'open' %}
+                                        <a href="{{ url_for('sales.new_payment', invoice_id=invoice.id) }}" class="btn btn-outline-success" title="Register Payment">
+                                            <i class="fas fa-money-bill-wave"></i>
+                                        </a>
+                                        {% endif %}
+                                        {% if invoice.state == 'draft' %}
+                                        <button type="button" class="btn btn-outline-danger" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#cancelInvoiceModal" 
+                                                data-invoice-id="{{ invoice.id }}"
+                                                data-invoice-name="{{ invoice.name }}">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                        {% endif %}
+                                        <button type="button" class="btn btn-outline-secondary" title="Print Invoice">
+                                            <i class="fas fa-print"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <p class="text-muted">No invoices found</p>
+                    <a href="{{ url_for('sales.new_invoice') }}" class="btn btn-primary">Create New Invoice</a>
+                </div>
+            {% endif %}
+        </div>
+        {% if invoices %}
+        <div class="card-footer">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <small class="text-muted">Showing {{ invoices|length }} invoice(s)</small>
+                </div>
+                <nav aria-label="Invoice pagination">
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
+                        </li>
+                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Cancel Invoice Modal -->
+<div class="modal fade" id="cancelInvoiceModal" tabindex="-1" aria-labelledby="cancelInvoiceModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cancelInvoiceModalLabel">Confirm Cancellation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to cancel invoice <strong id="invoiceNameToCancel"></strong>?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <form id="cancelInvoiceForm" method="POST">
+                    <button type="submit" class="btn btn-danger">Cancel Invoice</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Invoice search functionality
+        const searchInput = document.getElementById('invoiceSearch');
+        if (searchInput) {
+            searchInput.addEventListener('keyup', function() {
+                const searchTerm = this.value.toLowerCase();
+                const table = document.getElementById('invoicesTable');
+                const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+                
+                for (let i = 0; i < rows.length; i++) {
+                    const invoiceNum = rows[i].getElementsByTagName('td')[0].textContent.toLowerCase();
+                    const customer = rows[i].getElementsByTagName('td')[2].textContent.toLowerCase();
+                    
+                    if (invoiceNum.includes(searchTerm) || customer.includes(searchTerm)) {
+                        rows[i].style.display = '';
+                    } else {
+                        rows[i].style.display = 'none';
+                    }
+                }
+            });
+        }
+        
+        // Cancel invoice modal
+        const cancelInvoiceModal = document.getElementById('cancelInvoiceModal');
+        if (cancelInvoiceModal) {
+            cancelInvoiceModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const invoiceId = button.getAttribute('data-invoice-id');
+                const invoiceName = button.getAttribute('data-invoice-name');
+                
+                document.getElementById('invoiceNameToCancel').textContent = invoiceName;
+                document.getElementById('cancelInvoiceForm').action = `/sales/invoices/${invoiceId}/cancel`;
+            });
+        }
+    });
+</script>
+{% endblock %}

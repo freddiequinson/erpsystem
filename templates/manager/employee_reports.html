@@ -1,0 +1,678 @@
+{% extends 'base.html' %}
+
+{% block title %}Employee Reports{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+    .report-header {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+    .report-card {
+        transition: all 0.3s;
+    }
+    .report-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    .metric-card {
+        border-left: 4px solid #28a745;
+        border-radius: 4px;
+        padding: 15px;
+        margin-bottom: 15px;
+        background-color: white;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    .metric-title {
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin-bottom: 5px;
+    }
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 0;
+    }
+    .metric-card.sales {
+        border-left-color: #28a745;
+    }
+    .metric-card.orders {
+        border-left-color: #007bff;
+    }
+    .metric-card.items {
+        border-left-color: #fd7e14;
+    }
+    .metric-card.average {
+        border-left-color: #6f42c1;
+    }
+    .table th {
+        background-color: #f8f9fa;
+    }
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 30px;
+    }
+    .date-range-selector {
+        background-color: white;
+        border-radius: 4px;
+        padding: 15px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        margin-bottom: 20px;
+    }
+    .custom-date-inputs {
+        display: none;
+    }
+    .export-btn {
+        margin-top: 20px;
+    }
+    .employee-row:hover {
+        background-color: #f8f9fa;
+    }
+    .progress {
+        height: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('manager.dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Employee Reports</li>
+                </ol>
+            </nav>
+            <h1 class="h2 mb-4">{{ report_title }}</h1>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <form id="report-filters" method="get" action="{{ url_for('manager.employee_reports') }}">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="report_type">Report Type</label>
+                                    <select class="form-control" id="report_type" name="report_type">
+                                        <option value="sales" {% if report_type == 'sales' %}selected{% endif %}>Sales Performance</option>
+                                        <option value="attendance" {% if report_type == 'attendance' %}selected{% endif %}>Attendance</option>
+                                        <option value="productivity" {% if report_type == 'productivity' %}selected{% endif %}>Productivity</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="date_range">Date Range</label>
+                                    <select class="form-control" id="date_range" name="date_range">
+                                        <option value="today" {% if date_range == 'today' %}selected{% endif %}>Today</option>
+                                        <option value="yesterday" {% if date_range == 'yesterday' %}selected{% endif %}>Yesterday</option>
+                                        <option value="this_week" {% if date_range == 'this_week' %}selected{% endif %}>This Week</option>
+                                        <option value="last_week" {% if date_range == 'last_week' %}selected{% endif %}>Last Week</option>
+                                        <option value="this_month" {% if date_range == 'this_month' %}selected{% endif %}>This Month</option>
+                                        <option value="last_month" {% if date_range == 'last_month' %}selected{% endif %}>Last Month</option>
+                                        <option value="custom" {% if date_range == 'custom' %}selected{% endif %}>Custom Range</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4 custom-date-inputs" id="custom-date-container">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="start_date">Start Date</label>
+                                            <input type="text" class="form-control datepicker" id="start_date" name="start_date" value="{{ start_date }}">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="end_date">End Date</label>
+                                            <input type="text" class="form-control datepicker" id="end_date" name="end_date" value="{{ end_date }}">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary">Apply Filters</button>
+                                <button type="button" id="export-report" class="btn btn-outline-secondary ml-2">
+                                    <i class="fas fa-download"></i> Export CSV
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Header -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="report-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="h4">{{ report_title }} - {{ date_label }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Metrics -->
+    <div class="row mb-4">
+        {% if report_type == 'sales' %}
+            <div class="col-md-3">
+                <div class="metric-card sales">
+                    <div class="metric-title">Total Sales</div>
+                    <div class="metric-value">₵{{ "%.2f"|format(report_data.summary.total_sales) }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card orders">
+                    <div class="metric-title">Total Orders</div>
+                    <div class="metric-value">{{ report_data.summary.total_orders }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card items">
+                    <div class="metric-title">Total Items Sold</div>
+                    <div class="metric-value">{{ report_data.summary.total_items }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card average">
+                    <div class="metric-title">Average Order Value</div>
+                    <div class="metric-value">₵{{ "%.2f"|format(report_data.summary.avg_order_value) }}</div>
+                </div>
+            </div>
+        {% elif report_type == 'attendance' %}
+            <div class="col-md-6">
+                <div class="metric-card">
+                    <div class="metric-title">Total Sessions</div>
+                    <div class="metric-value">{{ report_data.summary.total_sessions }}</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="metric-card">
+                    <div class="metric-title">Average Session Duration</div>
+                    <div class="metric-value">{{ "%.2f"|format(report_data.summary.avg_session_duration) }} hours</div>
+                </div>
+            </div>
+        {% elif report_type == 'productivity' %}
+            <div class="col-md-6">
+                <div class="metric-card">
+                    <div class="metric-title">Average Sales Per Hour</div>
+                    <div class="metric-value">₵{{ "%.2f"|format(report_data.summary.avg_sales_per_hour) }}</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="metric-card">
+                    <div class="metric-title">Average Orders Per Hour</div>
+                    <div class="metric-value">{{ "%.2f"|format(report_data.summary.avg_orders_per_hour) }}</div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Charts -->
+    <div class="row mb-4">
+        {% if report_type == 'sales' %}
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title">Daily Sales</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="dailySalesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title">Employee Sales Distribution</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="employeeSalesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% elif report_type == 'attendance' %}
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title">Daily Sessions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="dailySessionsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title">Hours Worked by Employee</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="employeeHoursChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% elif report_type == 'productivity' %}
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title">Sales Per Hour by Employee</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="salesPerHourChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title">Orders Per Hour by Employee</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="ordersPerHourChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Employee Data Table -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">Employee Performance</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    {% if report_type == 'sales' %}
+                                        <th>Sales (₵)</th>
+                                        <th>Orders</th>
+                                        <th>Items Sold</th>
+                                        <th>Avg Order Value (₵)</th>
+                                        <th>% of Total Sales</th>
+                                    {% elif report_type == 'attendance' %}
+                                        <th>Sessions</th>
+                                        <th>Hours Worked</th>
+                                        <th>Avg Session Duration (hrs)</th>
+                                        <th>Attendance %</th>
+                                    {% elif report_type == 'productivity' %}
+                                        <th>Sales (₵)</th>
+                                        <th>Orders</th>
+                                        <th>Hours Worked</th>
+                                        <th>Sales/Hour (₵)</th>
+                                        <th>Orders/Hour</th>
+                                        <th>Efficiency %</th>
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for employee in report_data.employee_data %}
+                                    <tr class="employee-row">
+                                        <td>{{ employee.name }}</td>
+                                        {% if report_type == 'sales' %}
+                                            <td>₵{{ "%.2f"|format(employee.sales) }}</td>
+                                            <td>{{ employee.orders }}</td>
+                                            <td>{{ employee.items }}</td>
+                                            <td>₵{{ "%.2f"|format(employee.avg_order) }}</td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="progress flex-grow-1 me-2">
+                                                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ employee.sales_percentage }}%" aria-valuenow="{{ employee.sales_percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                    <span>{{ "%.2f"|format(employee.sales_percentage) }}%</span>
+                                                </div>
+                                            </td>
+                                        {% elif report_type == 'attendance' %}
+                                            <td>{{ employee.sessions }}</td>
+                                            <td>{{ "%.2f"|format(employee.hours_worked) }}</td>
+                                            <td>{{ "%.2f"|format(employee.avg_session_duration) }}</td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="progress flex-grow-1 me-2">
+                                                        <div class="progress-bar bg-info" role="progressbar" style="width: {{ employee.attendance_percentage }}%" aria-valuenow="{{ employee.attendance_percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                    <span>{{ "%.2f"|format(employee.attendance_percentage) }}%</span>
+                                                </div>
+                                            </td>
+                                        {% elif report_type == 'productivity' %}
+                                            <td>₵{{ "%.2f"|format(employee.sales) }}</td>
+                                            <td>{{ employee.orders }}</td>
+                                            <td>{{ "%.2f"|format(employee.hours_worked) }}</td>
+                                            <td>₵{{ "%.2f"|format(employee.sales_per_hour) }}</td>
+                                            <td>{{ "%.2f"|format(employee.orders_per_hour) }}</td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="progress flex-grow-1 me-2">
+                                                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ employee.sales_efficiency }}%" aria-valuenow="{{ employee.sales_efficiency }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                                    </div>
+                                                    <span>{{ "%.2f"|format(employee.sales_efficiency) }}%</span>
+                                                </div>
+                                            </td>
+                                        {% endif %}
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if report_type == 'sales' %}
+    <!-- Top Products -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">Top Selling Products</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Product</th>
+                                    <th>Quantity Sold</th>
+                                    <th>Sales (₵)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in report_data.top_products %}
+                                    <tr>
+                                        <td>{{ loop.index }}</td>
+                                        <td>{{ product.name }}</td>
+                                        <td>{{ product.quantity }}</td>
+                                        <td>₵{{ "%.2f"|format(product.sales) }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize date pickers
+        flatpickr('.datepicker', {
+            dateFormat: 'Y-m-d'
+        });
+
+        // Show/hide custom date inputs
+        const dateRangeSelect = document.getElementById('date_range');
+        const customDateContainer = document.getElementById('custom-date-container');
+        
+        function toggleCustomDateInputs() {
+            if (dateRangeSelect.value === 'custom') {
+                customDateContainer.style.display = 'block';
+            } else {
+                customDateContainer.style.display = 'none';
+            }
+        }
+        
+        toggleCustomDateInputs();
+        dateRangeSelect.addEventListener('change', toggleCustomDateInputs);
+
+        // Export report as CSV
+        document.getElementById('export-report').addEventListener('click', function() {
+            const currentUrl = new URL(window.location.href);
+            const params = new URLSearchParams(currentUrl.search);
+            
+            // Create export URL with current filters
+            let exportUrl = '{{ url_for("manager.export_employee_report") }}?';
+            exportUrl += 'report_type=' + (params.get('report_type') || 'sales');
+            exportUrl += '&date_range=' + (params.get('date_range') || 'this_month');
+            
+            if (params.get('date_range') === 'custom') {
+                exportUrl += '&start_date=' + (params.get('start_date') || '');
+                exportUrl += '&end_date=' + (params.get('end_date') || '');
+            }
+            
+            // Fetch CSV data
+            fetch(exportUrl)
+                .then(response => response.json())
+                .then(data => {
+                    // Create a Blob with the CSV data
+                    const blob = new Blob([data.csv], { type: 'text/csv' });
+                    const url = window.URL.createObjectURL(blob);
+                    
+                    // Create a temporary link and trigger download
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = data.filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    
+                    // Clean up
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                })
+                .catch(error => console.error('Error exporting report:', error));
+        });
+
+        // Initialize charts based on report type
+        {% if report_type == 'sales' %}
+            // Daily Sales Chart
+            const dailySalesCtx = document.getElementById('dailySalesChart').getContext('2d');
+            new Chart(dailySalesCtx, {
+                type: 'line',
+                data: {
+                    labels: {{ report_data.chart_data.dates|tojson }},
+                    datasets: [{
+                        label: 'Daily Sales (₵)',
+                        data: {{ report_data.chart_data.daily_sales|tojson }},
+                        backgroundColor: 'rgba(40, 167, 69, 0.2)',
+                        borderColor: 'rgba(40, 167, 69, 1)',
+                        borderWidth: 2,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₵' + value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Employee Sales Chart
+            const employeeSalesCtx = document.getElementById('employeeSalesChart').getContext('2d');
+            new Chart(employeeSalesCtx, {
+                type: 'pie',
+                data: {
+                    labels: {{ report_data.chart_data.employee_names|tojson }},
+                    datasets: [{
+                        data: {{ report_data.chart_data.employee_sales|tojson }},
+                        backgroundColor: [
+                            'rgba(40, 167, 69, 0.7)',
+                            'rgba(0, 123, 255, 0.7)',
+                            'rgba(253, 126, 20, 0.7)',
+                            'rgba(111, 66, 193, 0.7)',
+                            'rgba(23, 162, 184, 0.7)',
+                            'rgba(220, 53, 69, 0.7)',
+                            'rgba(255, 193, 7, 0.7)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((value / total) * 100);
+                                    return `${label}: ₵${value.toFixed(2)} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        {% elif report_type == 'attendance' %}
+            // Daily Sessions Chart
+            const dailySessionsCtx = document.getElementById('dailySessionsChart').getContext('2d');
+            new Chart(dailySessionsCtx, {
+                type: 'bar',
+                data: {
+                    labels: {{ report_data.chart_data.dates|tojson }},
+                    datasets: [{
+                        label: 'Daily Sessions',
+                        data: {{ report_data.chart_data.daily_sessions|tojson }},
+                        backgroundColor: 'rgba(23, 162, 184, 0.7)',
+                        borderColor: 'rgba(23, 162, 184, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Employee Hours Chart
+            const employeeHoursCtx = document.getElementById('employeeHoursChart').getContext('2d');
+            new Chart(employeeHoursCtx, {
+                type: 'bar',
+                data: {
+                    labels: {{ report_data.chart_data.employee_names|tojson }},
+                    datasets: [{
+                        label: 'Hours Worked',
+                        data: {{ report_data.chart_data.employee_hours|tojson }},
+                        backgroundColor: 'rgba(23, 162, 184, 0.7)',
+                        borderColor: 'rgba(23, 162, 184, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        {% elif report_type == 'productivity' %}
+            // Sales Per Hour Chart
+            const salesPerHourCtx = document.getElementById('salesPerHourChart').getContext('2d');
+            new Chart(salesPerHourCtx, {
+                type: 'bar',
+                data: {
+                    labels: {{ report_data.chart_data.employee_names|tojson }},
+                    datasets: [{
+                        label: 'Sales Per Hour (₵)',
+                        data: {{ report_data.chart_data.sales_per_hour|tojson }},
+                        backgroundColor: 'rgba(0, 123, 255, 0.7)',
+                        borderColor: 'rgba(0, 123, 255, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₵' + value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Orders Per Hour Chart
+            const ordersPerHourCtx = document.getElementById('ordersPerHourChart').getContext('2d');
+            new Chart(ordersPerHourCtx, {
+                type: 'bar',
+                data: {
+                    labels: {{ report_data.chart_data.employee_names|tojson }},
+                    datasets: [{
+                        label: 'Orders Per Hour',
+                        data: {{ report_data.chart_data.orders_per_hour|tojson }},
+                        backgroundColor: 'rgba(111, 66, 193, 0.7)',
+                        borderColor: 'rgba(111, 66, 193, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        {% endif %}
+    });
+</script>
+{% endblock %}

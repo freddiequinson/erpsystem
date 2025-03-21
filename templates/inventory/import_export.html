@@ -1,0 +1,283 @@
+{% extends 'base.html' %}
+
+{% block title %}Import/Export Inventory{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Import/Export Products</h1>
+            <p class="text-muted">Import products from Excel or export your products to Excel</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('inventory.products') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Products
+            </a>
+        </div>
+    </div>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <ul class="nav nav-tabs card-header-tabs" id="importExportTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="import-tab" data-bs-toggle="tab" data-bs-target="#import" type="button" role="tab">Import Products</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="export-tab" data-bs-toggle="tab" data-bs-target="#export" type="button" role="tab">Export Products</button>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content" id="importExportTabsContent">
+                        <div class="tab-pane fade show active" id="import" role="tabpanel" aria-labelledby="import-tab">
+                            <!-- Step 1: File Upload -->
+                            <div class="step-container" id="step1" style="display: block;">
+                                <h4>Step 1: Upload Excel File</h4>
+                                <p>Select an Excel file (.xlsx or .xls) containing product data to import.</p>
+                                <form id="uploadForm" enctype="multipart/form-data">
+                                    <div class="mb-3">
+                                        <label for="excelFile" class="form-label">Excel File</label>
+                                        <input type="file" class="form-control" id="excelFile" name="excel_file" accept=".xlsx,.xls" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="headerRow" name="header_row" checked>
+                                            <label class="form-check-label" for="headerRow">
+                                                First row contains column headers
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <button type="button" id="uploadBtn" class="btn btn-primary">
+                                            <i class="fas fa-upload"></i> Upload and Preview
+                                        </button>
+                                        <a href="{{ url_for('inventory.download_template') }}" class="btn btn-outline-secondary">
+                                            <i class="fas fa-download"></i> Download Template
+                                        </a>
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <!-- Step 2: Preview and Mapping -->
+                            <div class="step-container" id="step2" style="display: none;">
+                                <h4>Step 2: Map Columns to Fields</h4>
+                                <p>Preview your data and map Excel columns to product fields.</p>
+                                
+                                <div class="preview-table mb-4">
+                                    <h5>Data Preview</h5>
+                                    <div id="previewContainer" class="table-responsive">
+                                        <!-- Preview table will be inserted here -->
+                                    </div>
+                                </div>
+                                
+                                <form id="mappingForm" action="{{ url_for('inventory.import_products') }}" method="post" enctype="multipart/form-data">
+                                    <input type="hidden" id="fileData" name="file_data">
+                                    <input type="hidden" id="hasHeader" name="has_header">
+                                    
+                                    <h5>Column Mapping</h5>
+                                    <p class="text-muted">Match your Excel columns to the appropriate product fields. Required fields are marked with *.</p>
+                                    
+                                    <div class="mapping-container">
+                                        <div id="mappingFields">
+                                            <!-- Mapping fields will be inserted here -->
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-3">
+                                        <button type="button" id="backToStep1" class="btn btn-secondary">
+                                            <i class="fas fa-arrow-left"></i> Back
+                                        </button>
+                                        <button type="submit" class="btn btn-success">
+                                            <i class="fas fa-file-import"></i> Import Products
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="export" role="tabpanel" aria-labelledby="export-tab">
+                            <h4>Export Products</h4>
+                            <p>Download your product data as an Excel file.</p>
+                            <div class="mb-3">
+                                <a href="{{ url_for('inventory.export_products') }}" class="btn btn-primary">
+                                    <i class="fas fa-file-export"></i> Export All Products
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Make sure jQuery is loaded before your script -->
+<script src="{{ url_for('static', filename='js/jquery-3.6.0.min.js') }}"></script>
+<script>
+    $(document).ready(function() {
+        console.log('Document ready');
+        
+        // Step navigation
+        $('#uploadBtn').click(function(e) {
+            e.preventDefault();
+            console.log('Upload button clicked');
+            
+            const fileInput = $('#excelFile')[0];
+            if (fileInput.files.length === 0) {
+                alert('Please select a file to upload');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('excel_file', fileInput.files[0]);
+            formData.append('has_header', $('#headerRow').is(':checked'));
+            
+            console.log('File selected:', fileInput.files[0].name);
+            console.log('Has header:', $('#headerRow').is(':checked'));
+            
+            // Show loading indicator
+            $('#uploadBtn').html('<i class="fas fa-spinner fa-spin"></i> Processing...');
+            $('#uploadBtn').prop('disabled', true);
+            
+            // Send file for preview
+            $.ajax({
+                url: "{{ url_for('inventory.preview_excel') }}",
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    console.log('Preview success:', response);
+                    
+                    // Store file data for later submission
+                    $('#fileData').val(response.file_id);
+                    $('#hasHeader').val($('#headerRow').is(':checked'));
+                    
+                    // Generate preview table
+                    let previewHtml = '<table class="table table-sm table-bordered">';
+                    
+                    // Headers
+                    previewHtml += '<thead><tr>';
+                    response.columns.forEach(function(column) {
+                        previewHtml += `<th>${column}</th>`;
+                    });
+                    previewHtml += '</tr></thead>';
+                    
+                    // Data rows
+                    previewHtml += '<tbody>';
+                    response.preview_data.forEach(function(row) {
+                        previewHtml += '<tr>';
+                        row.forEach(function(cell) {
+                            previewHtml += `<td>${cell !== null ? cell : ''}</td>`;
+                        });
+                        previewHtml += '</tr>';
+                    });
+                    previewHtml += '</tbody></table>';
+                    
+                    $('#previewContainer').html(previewHtml);
+                    
+                    // Generate mapping fields
+                    let mappingHtml = '';
+                    
+                    // Define required and optional fields
+                    const fields = [
+                        { name: 'name', label: 'Product Name', required: true },
+                        { name: 'sku', label: 'SKU', required: true },
+                        { name: 'cost_price', label: 'Cost Price', required: false },
+                        { name: 'sale_price', label: 'Sales Price', required: false },
+                        { name: 'quantity', label: 'Quantity on Hand', required: false },
+                        { name: 'warehouse', label: 'Warehouse', required: false },
+                        { name: 'category', label: 'Category', required: false },
+                        { name: 'pos_category', label: 'POS Category', required: false },
+                        { name: 'available_in_pos', label: 'Available in POS', required: false },
+                        { name: 'barcode', label: 'Barcode', required: false },
+                        { name: 'description', label: 'Description', required: false },
+                        { name: 'min_stock', label: 'Min Stock', required: false },
+                        { name: 'max_stock', label: 'Max Stock', required: false },
+                        { name: 'weight', label: 'Weight', required: false },
+                        { name: 'volume', label: 'Volume', required: false },
+                        { name: 'is_active', label: 'Is Active', required: false }
+                    ];
+                    
+                    fields.forEach(function(field) {
+                        mappingHtml += `
+                            <div class="mapping-row">
+                                <div class="row align-items-center mb-2">
+                                    <div class="col-md-4">
+                                        <label class="form-label">${field.label} ${field.required ? '<span class="text-danger">*</span>' : ''}</label>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <select class="form-select" name="mapping[${field.name}]" ${field.required ? 'required' : ''}>
+                                            ${field.required ? '' : '<option value="">-- Do not import --</option>'}`;
+                                        
+                        // Try to find a matching column
+                        let matchFound = false;
+                        response.columns.forEach(function(column, index) {
+                            const columnLower = column.toLowerCase();
+                            const fieldLower = field.name.toLowerCase();
+                            const labelLower = field.label.toLowerCase();
+                            
+                            const selected = columnLower === fieldLower || 
+                                           columnLower === labelLower ||
+                                           columnLower.includes(fieldLower) || 
+                                           labelLower.includes(columnLower);
+                            
+                            mappingHtml += `<option value="${index}" ${selected ? 'selected' : ''}>${column}</option>`;
+                            if (selected) matchFound = true;
+                        });
+                        
+                        // If no match was found for required fields, select the first column as default
+                        if (field.required && !matchFound && response.columns.length > 0) {
+                            mappingHtml = mappingHtml.replace(`<option value="0"`, `<option value="0" selected`);
+                        }
+                        
+                        mappingHtml += `
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>`;
+                    });
+                    
+                    $('#mappingFields').html(mappingHtml);
+                    
+                    // Show step 2, hide step 1
+                    $('#step1').hide();
+                    $('#step2').show();
+                    
+                    // Reset upload button
+                    $('#uploadBtn').html('<i class="fas fa-upload"></i> Upload and Preview');
+                    $('#uploadBtn').prop('disabled', false);
+                },
+                error: function(xhr, status, error) {
+                    console.error('Preview error:', error);
+                    console.error('Status:', status);
+                    console.error('Response:', xhr.responseText);
+                    
+                    alert('Error previewing file: ' + (xhr.responseJSON?.error || error || 'Unknown error'));
+                    $('#uploadBtn').html('<i class="fas fa-upload"></i> Upload and Preview');
+                    $('#uploadBtn').prop('disabled', false);
+                }
+            });
+        });
+        
+        $('#backToStep1').click(function() {
+            $('#step2').hide();
+            $('#step1').show();
+        });
+    });
+</script>
+{% endblock %}

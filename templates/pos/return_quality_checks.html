@@ -1,0 +1,192 @@
+{% extends 'base.html' %}
+
+{% block title %}Quality Checks - {{ pos_return.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Quality Checks for {{ pos_return.name }}</h1>
+            <p class="text-muted">Process quality checks for returned items</p>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('pos.return_detail', return_id=pos_return.id) }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i> Back to Return
+            </a>
+        </div>
+    </div>
+
+    <!-- Return Information Summary -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Return Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <p><strong>Customer:</strong> {{ pos_return.customer_name }}</p>
+                            <p><strong>Return Date:</strong> {{ pos_return.return_date.strftime('%d/%m/%Y') }}</p>
+                        </div>
+                        <div class="col-md-3">
+                            <p><strong>Total Amount:</strong> ₵{{ '{:.2f}'.format(pos_return.total_amount) }}</p>
+                            <p><strong>Status:</strong> {{ pos_return.state|capitalize }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="progress mb-3">
+                                {% set total_lines = pending_lines|length + completed_checks|length %}
+                                {% set completed_percentage = (completed_checks|length / total_lines * 100) if total_lines > 0 else 0 %}
+                                {% set width_class = "w-" ~ completed_percentage|int %}
+                                <div class="progress-bar progress-bar-resellable {{ width_class }}" role="progressbar">
+                                    {{ completed_checks|length }} / {{ total_lines }} Items Checked
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">{{ pending_lines|length }} items pending</small>
+                                <small class="text-muted">{{ completed_checks|length }} items processed</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Items -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Pending Quality Checks</h5>
+                    {% if pending_lines %}
+                    <a href="{{ url_for('pos.sequential_quality_checks') }}" class="btn btn-success btn-sm">
+                        <i class="fas fa-tasks me-2"></i> Process All Sequentially
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if pending_lines %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Quantity</th>
+                                    <th>Return Reason</th>
+                                    <th>Unit Price</th>
+                                    <th>Subtotal</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for line in pending_lines %}
+                                <tr>
+                                    <td>{{ line.product.name if line.product else 'Unknown Product' }}</td>
+                                    <td>{{ line.quantity }}</td>
+                                    <td>{{ line.return_reason }}</td>
+                                    <td>₵{{ '{:.2f}'.format(line.unit_price) }}</td>
+                                    <td>₵{{ '{:.2f}'.format(line.subtotal) }}</td>
+                                    <td>
+                                        <a href="{{ url_for('pos.new_quality_check', return_line_id=line.id) }}" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-clipboard-check me-1"></i> Check Quality
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                        <p>All items have been checked!</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Completed Checks -->
+    {% if completed_checks %}
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Completed Quality Checks</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Product</th>
+                                    <th>Result</th>
+                                    <th>Disposition</th>
+                                    <th>Checked By</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for check in completed_checks %}
+                                <tr>
+                                    <td>{{ check.check_date.strftime('%d/%m/%Y %H:%M') }}</td>
+                                    <td>
+                                        {% if check.return_line and check.return_line.product %}
+                                        {{ check.return_line.product.name }}
+                                        {% else %}
+                                        Unknown Product
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if check.quality_state == 'pass' %}bg-success{% elif check.quality_state == 'not_defective' %}bg-info{% elif check.quality_state == 'minor_defect' %}bg-warning{% elif check.quality_state == 'major_defect' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                            {{ check.quality_state|replace('_', ' ')|title }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if check.disposition == 'stock' %}bg-success{% elif check.disposition == 'scrap' %}bg-danger{% elif check.disposition == 'repair' %}bg-warning{% elif check.disposition == 'vendor' %}bg-info{% elif check.disposition == 'discount_sale' %}bg-primary{% else %}bg-secondary{% endif %}">
+                                            {{ check.disposition|replace('_', ' ')|title }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if check.checked_by_user %}
+                                        {{ check.checked_by_user.username }}
+                                        {% else %}
+                                        System
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if check.notes %}
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="popover" data-bs-placement="left" title="Quality Check Notes" data-bs-content="{{ check.notes }}">
+                                            <i class="fas fa-sticky-note"></i> View Notes
+                                        </button>
+                                        {% else %}
+                                        <span class="text-muted">No notes</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize popovers
+        var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+        var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+            return new bootstrap.Popover(popoverTriggerEl)
+        });
+    });
+</script>
+{% endblock %}

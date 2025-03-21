@@ -1,0 +1,425 @@
+{% extends 'base.html' %}
+
+{% block title %}Sales Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Sales Dashboard</h1>
+            <p class="text-muted">Overview of your sales performance and metrics (including POS sales)</p>
+        </div>
+        <div class="col-auto">
+            <div class="btn-group">
+                <a href="{{ url_for('sales.new_order') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> New Order
+                </a>
+                <a href="{{ url_for('sales.new_invoice') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-file-invoice"></i> New Invoice
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="row mb-4">
+        <!-- Total Sales -->
+        <div class="col-md-3">
+            <div class="card border-left-primary h-100">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Sales (This Month)
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">₵{{ total_sales|default(0)|round(2) }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <small class="text-muted">
+                        {% if prev_month_sales > 0 %}
+                            {% set percent_change = ((total_sales - prev_month_sales) / prev_month_sales * 100)|round(1) %}
+                            {% if percent_change > 0 %}
+                                <span class="text-success"><i class="fas fa-arrow-up"></i> {{ percent_change }}%</span>
+                            {% elif percent_change < 0 %}
+                                <span class="text-danger"><i class="fas fa-arrow-down"></i> {{ percent_change|abs }}%</span>
+                            {% else %}
+                                <span class="text-muted">No change</span>
+                            {% endif %}
+                            from previous month
+                        {% else %}
+                            No data for previous month
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Orders Count -->
+        <div class="col-md-3">
+            <div class="card border-left-success h-100">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Orders (This Month)
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ orders_count|default(0) }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-shopping-cart fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <small class="text-muted">
+                        {% if prev_month_orders > 0 %}
+                            {% set percent_change = ((orders_count - prev_month_orders) / prev_month_orders * 100)|round(1) %}
+                            {% if percent_change > 0 %}
+                                <span class="text-success"><i class="fas fa-arrow-up"></i> {{ percent_change }}%</span>
+                            {% elif percent_change < 0 %}
+                                <span class="text-danger"><i class="fas fa-arrow-down"></i> {{ percent_change|abs }}%</span>
+                            {% else %}
+                                <span class="text-muted">No change</span>
+                            {% endif %}
+                            from previous month
+                        {% else %}
+                            No data for previous month
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Average Order Value -->
+        <div class="col-md-3">
+            <div class="card border-left-info h-100">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Average Order Value
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {% if orders_count > 0 %}
+                                    ₵{{ (total_sales / orders_count)|round(2) }}
+                                {% else %}
+                                    ₵0.00
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <small class="text-muted">Based on confirmed orders</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Unpaid Invoices -->
+        <div class="col-md-3">
+            <div class="card border-left-warning h-100">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Unpaid Invoices
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">₵{{ unpaid_amount|default(0)|round(2) }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-file-invoice-dollar fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <small class="text-muted">{{ unpaid_count|default(0) }} unpaid invoice(s)</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sales Chart and Top Customers -->
+    <div class="row mb-4">
+        <!-- Sales Chart -->
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Sales Trend</h5>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-secondary active" data-period="week">Week</button>
+                        <button type="button" class="btn btn-outline-secondary" data-period="month">Month</button>
+                        <button type="button" class="btn btn-outline-secondary" data-period="quarter">Quarter</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div style="height: 200px;">
+                        <canvas id="salesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Customers -->
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Top Customers</h5>
+                </div>
+                <div class="card-body">
+                    {% if top_customers %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Customer</th>
+                                        <th class="text-end">Orders</th>
+                                        <th class="text-end">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for customer in top_customers %}
+                                    <tr>
+                                        <td>{{ customer.name }}</td>
+                                        <td class="text-end">{{ customer.orders_count }}</td>
+                                        <td class="text-end">₵{{ customer.total_amount|round(2) }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <p class="text-muted">No customer data available</p>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-transparent">
+                    <a href="{{ url_for('sales.customers') }}" class="btn btn-sm btn-outline-primary">View All Customers</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Orders and Product Performance -->
+    <div class="row">
+        <!-- Recent Orders -->
+        <div class="col-lg-7">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Recent Orders</h5>
+                    <div>
+                        <a href="{{ url_for('sales.orders') }}" class="btn btn-sm btn-outline-primary">View Sales Orders</a>
+                        <a href="{{ url_for('pos.orders') }}" class="btn btn-sm btn-outline-success">View POS Orders</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if recent_orders %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Order #</th>
+                                        <th>Date</th>
+                                        <th>Customer</th>
+                                        <th>Type</th>
+                                        <th>Status</th>
+                                        <th class="text-end">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for order in recent_orders %}
+                                    <tr>
+                                        <td>
+                                            {% if order.type == 'sales' %}
+                                                <a href="{{ url_for('sales.edit_order', order_id=order.id) }}">{{ order.name }}</a>
+                                            {% else %}
+                                                <a href="{{ url_for('pos.view_order', order_id=order.id) }}">{{ order.name }}</a>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ order.order_date.strftime('%Y-%m-%d') }}</td>
+                                        <td>{{ order.customer.name if order.customer else 'Walk-in Customer' }}</td>
+                                        <td>
+                                            {% if order.type == 'sales' %}
+                                                <span class="badge bg-primary">Sales</span>
+                                            {% else %}
+                                                <span class="badge bg-success">POS</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if order.type == 'sales' %}
+                                                {% if order.state == 'draft' %}
+                                                    <span class="badge bg-secondary">Draft</span>
+                                                {% elif order.state == 'confirmed' %}
+                                                    <span class="badge bg-primary">Confirmed</span>
+                                                {% elif order.state == 'done' %}
+                                                    <span class="badge bg-success">Completed</span>
+                                                {% elif order.state == 'cancelled' %}
+                                                    <span class="badge bg-danger">Cancelled</span>
+                                                {% endif %}
+                                            {% else %}
+                                                {% if order.state == 'paid' %}
+                                                    <span class="badge bg-success">Paid</span>
+                                                {% elif order.state == 'cancelled' %}
+                                                    <span class="badge bg-danger">Cancelled</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">{{ order.state }}</span>
+                                                {% endif %}
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">₵{{ order.total_amount|round(2) }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <p class="text-muted">No recent orders</p>
+                            <a href="{{ url_for('sales.new_order') }}" class="btn btn-primary">Create New Order</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Products -->
+        <div class="col-lg-5">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Top Selling Products</h5>
+                </div>
+                <div class="card-body">
+                    {% if top_products %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th class="text-end">Quantity</th>
+                                        <th class="text-end">Revenue</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for product in top_products %}
+                                    <tr>
+                                        <td>{{ product.name }}</td>
+                                        <td class="text-end">{{ product.quantity_sold }}</td>
+                                        <td class="text-end">₵{{ product.revenue|round(2) }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <p class="text-muted">No product sales data available</p>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-transparent">
+                    <a href="{{ url_for('inventory.products') }}" class="btn btn-sm btn-outline-primary">View All Products</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Data from the backend
+        const salesData = {{ sales_data|tojson }};
+        
+        // Initialize the chart
+        const ctx = document.getElementById('salesChart').getContext('2d');
+        const salesChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: salesData.labels,
+                datasets: [{
+                    label: 'Sales',
+                    data: salesData.values,
+                    backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                    borderColor: 'rgba(78, 115, 223, 1)',
+                    pointRadius: 3,
+                    pointBackgroundColor: 'rgba(78, 115, 223, 1)',
+                    pointBorderColor: 'rgba(78, 115, 223, 1)',
+                    pointHoverRadius: 5,
+                    pointHoverBackgroundColor: 'rgba(78, 115, 223, 1)',
+                    pointHoverBorderColor: 'rgba(78, 115, 223, 1)',
+                    pointHitRadius: 10,
+                    pointBorderWidth: 2,
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            maxTicksLimit: 5
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return '₵' + context.raw.toFixed(2);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Period selector functionality
+        document.querySelectorAll('[data-period]').forEach(button => {
+            button.addEventListener('click', function() {
+                // Remove active class from all buttons
+                document.querySelectorAll('[data-period]').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                
+                // Add active class to clicked button
+                this.classList.add('active');
+                
+                // Get the selected period
+                const period = this.getAttribute('data-period');
+                
+                // Make AJAX request to get new data
+                fetch(`/sales/api/chart-data?period=${period}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        // Update chart data
+                        salesChart.data.labels = data.labels;
+                        salesChart.data.datasets[0].data = data.values;
+                        salesChart.update();
+                    })
+                    .catch(error => console.error('Error fetching chart data:', error));
+            });
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block title %}Stock Movements{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Stock Movements</h1>
+            <p class="text-muted">Track product stock movements across warehouses</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('inventory.new_stock_move') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> New Stock Movement
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('inventory.products') }}">Products</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('inventory.categories') }}">Categories</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('inventory.warehouses') }}">Warehouses</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="{{ url_for('inventory.stock_moves') }}">Stock Movements</a>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body">
+            <div class="mb-4">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="product" class="form-label">Product</label>
+                        <select name="product_id" id="product" class="form-select">
+                            <option value="">All Products</option>
+                            {% for product in products %}
+                            <option value="{{ product.id }}" {% if request.args.get('product_id')|int == product.id %}selected{% endif %}>{{ product.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="source_location" class="form-label">Source Location</label>
+                        <select name="source_location_id" id="source_location" class="form-select">
+                            <option value="">All Locations</option>
+                            {% for location in locations %}
+                            <option value="{{ location.id }}" {% if request.args.get('source_location_id')|int == location.id %}selected{% endif %}>{{ location.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="destination_location" class="form-label">Destination Location</label>
+                        <select name="destination_location_id" id="destination_location" class="form-select">
+                            <option value="">All Locations</option>
+                            {% for location in locations %}
+                            <option value="{{ location.id }}" {% if request.args.get('destination_location_id')|int == location.id %}selected{% endif %}>{{ location.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="state" class="form-label">Status</label>
+                        <select name="state" id="state" class="form-select">
+                            <option value="">All Status</option>
+                            <option value="draft" {% if request.args.get('state') == 'draft' %}selected{% endif %}>Draft</option>
+                            <option value="validated" {% if request.args.get('state') == 'validated' %}selected{% endif %}>Validated</option>
+                            <option value="cancelled" {% if request.args.get('state') == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="col-12 mt-3">
+                        <button type="submit" class="btn btn-primary">Filter</button>
+                        <a href="{{ url_for('inventory.stock_moves') }}" class="btn btn-secondary">Reset</a>
+                    </div>
+                </form>
+            </div>
+            
+            {% if stock_moves %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Reference</th>
+                            <th>Product</th>
+                            <th>Source</th>
+                            <th>Destination</th>
+                            <th>Quantity</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for move in stock_moves %}
+                        <tr>
+                            <td>{{ move.reference }}</td>
+                            <td>{{ move.product.name }}</td>
+                            <td>{{ move.source_location.name }}</td>
+                            <td>{{ move.destination_location.name }}</td>
+                            <td>{{ move.quantity }} {{ move.product.uom.name }}</td>
+                            <td>
+                                {% if move.state == 'draft' %}
+                                <span class="badge bg-secondary">Draft</span>
+                                {% elif move.state == 'validated' %}
+                                <span class="badge bg-success">Validated</span>
+                                {% elif move.state == 'cancelled' %}
+                                <span class="badge bg-danger">Cancelled</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ move.created_at.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                                {% if move.state == 'draft' %}
+                                <div class="btn-group">
+                                    <a href="{{ url_for('inventory.validate_stock_move', move_id=move.id) }}" class="btn btn-sm btn-outline-success" onclick="return confirm('Are you sure you want to validate this stock movement?');">
+                                        <i class="fas fa-check"></i>
+                                    </a>
+                                    <a href="{{ url_for('inventory.cancel_stock_move', move_id=move.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to cancel this stock movement?');">
+                                        <i class="fas fa-times"></i>
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-exchange-alt fa-4x text-muted mb-3"></i>
+                <p class="lead">No stock movements found</p>
+                <a href="{{ url_for('inventory.new_stock_move') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Create Stock Movement
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        $('#product, #source_location, #destination_location, #state').select2({
+            theme: 'bootstrap-5'
+        });
+    });
+</script>
+{% endblock %}

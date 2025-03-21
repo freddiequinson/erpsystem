@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+
+{% block title %}Register Payment - Invoice {{ invoice.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Register Payment</h1>
+            <p class="text-muted">Invoice: {{ invoice.name }} - {{ invoice.supplier.name }}</p>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('purchase.view_invoice', invoice_id=invoice.id) }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Invoice
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Payment Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="payment_date" class="form-label">Payment Date</label>
+                                {{ form.payment_date(class="form-control" + (" is-invalid" if form.payment_date.errors else "")) }}
+                                {% if form.payment_date.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.payment_date.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="payment_method" class="form-label">Payment Method</label>
+                                {{ form.payment_method(class="form-select" + (" is-invalid" if form.payment_method.errors else "")) }}
+                                {% if form.payment_method.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.payment_method.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="amount" class="form-label">Amount</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">₵</span>
+                                    {{ form.amount(class="form-control" + (" is-invalid" if form.amount.errors else "")) }}
+                                    {% if form.amount.errors %}
+                                        <div class="invalid-feedback">
+                                            {% for error in form.amount.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="reference" class="form-label">Reference</label>
+                                {{ form.reference(class="form-control" + (" is-invalid" if form.reference.errors else ""), placeholder="Check number, transaction ID, etc.") }}
+                                {% if form.reference.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.reference.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notes</label>
+                            {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""), rows=3) }}
+                            {% if form.notes.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.notes.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-flex justify-content-end">
+                            <a href="{{ url_for('purchase.view_invoice', invoice_id=invoice.id) }}" class="btn btn-secondary me-2">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Confirm Payment</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Invoice Summary Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Invoice Summary</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>Invoice Number</span>
+                            <span>{{ invoice.name }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>Invoice Date</span>
+                            <span>{{ invoice.invoice_date.strftime('%Y-%m-%d') }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>Due Date</span>
+                            <span>{{ invoice.due_date.strftime('%Y-%m-%d') if invoice.due_date else 'Not specified' }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>Supplier</span>
+                            <span>{{ invoice.supplier.name }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Payment Status Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Payment Status</h5>
+                </div>
+                <div class="card-body">
+                    {% set total_amount = invoice.total_amount + invoice.tax_amount %}
+                    {% set paid_amount = invoice.payments|sum(attribute='amount') %}
+                    {% set remaining_amount = total_amount - paid_amount %}
+                    
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>Total Amount</span>
+                            <span>₵{{ "%.2f"|format(total_amount) }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>Paid Amount</span>
+                            <span>₵{{ "%.2f"|format(paid_amount) }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>Remaining</span>
+                            <strong class="text-danger">₵{{ "%.2f"|format(remaining_amount) }}</strong>
+                        </li>
+                    </ul>
+                    
+                    <div class="d-grid gap-2 mt-3">
+                        <button type="button" id="pay-full-amount" class="btn btn-outline-primary">Pay Full Amount</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set today's date as default for payment date
+        document.getElementById('payment_date').valueAsDate = new Date();
+        
+        // Set full amount when button is clicked
+        document.getElementById('pay-full-amount').addEventListener('click', function() {
+            document.getElementById('amount').value = {{ "%.2f"|format(invoice.total_amount + invoice.tax_amount - invoice.payments|sum(attribute='amount')) }};
+        });
+    });
+</script>
+{% endblock %}

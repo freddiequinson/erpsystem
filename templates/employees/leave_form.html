@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>{{ title }}</h1>
+            <p class="text-muted">{% if leave %}Update{% else %}Create a new{% endif %} leave request</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('employees.index') }}">Employees</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('employees.departments') }}">Departments</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('employees.job_positions') }}">Job Positions</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="{{ url_for('employees.leaves') }}">Leave Management</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('employees.attendances') }}">Attendance</a>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Leave Request Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="form-group">
+                                    {{ form.employee_id.label(class="form-label") }}
+                                    {{ form.employee_id(class="form-control" + (" is-invalid" if form.employee_id.errors else "")) }}
+                                    {% for error in form.employee_id.errors %}
+                                        <div class="invalid-feedback">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="form-group">
+                                    {{ form.leave_type_id.label(class="form-label") }}
+                                    {{ form.leave_type_id(class="form-control" + (" is-invalid" if form.leave_type_id.errors else "")) }}
+                                    {% for error in form.leave_type_id.errors %}
+                                        <div class="invalid-feedback">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="form-group">
+                                    {{ form.start_date.label(class="form-label") }}
+                                    {{ form.start_date(class="form-control" + (" is-invalid" if form.start_date.errors else ""), type="date") }}
+                                    {% for error in form.start_date.errors %}
+                                        <div class="invalid-feedback">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="form-group">
+                                    {{ form.end_date.label(class="form-label") }}
+                                    {{ form.end_date(class="form-control" + (" is-invalid" if form.end_date.errors else ""), type="date") }}
+                                    {% for error in form.end_date.errors %}
+                                        <div class="invalid-feedback">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <div class="form-group">
+                                    {{ form.reason.label(class="form-label") }}
+                                    {{ form.reason(class="form-control" + (" is-invalid" if form.reason.errors else ""), rows=3) }}
+                                    {% for error in form.reason.errors %}
+                                        <div class="invalid-feedback">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <a href="{{ url_for('employees.leaves') }}" class="btn btn-secondary">Cancel</a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize select2 for dropdown fields
+        $('#employee_id, #leave_type_id').select2({
+            theme: 'bootstrap-5'
+        });
+        
+        // Calculate duration when dates change
+        $('#start_date, #end_date').change(function() {
+            const startDate = new Date($('#start_date').val());
+            const endDate = new Date($('#end_date').val());
+            
+            if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+                // Calculate difference in days
+                const diffTime = Math.abs(endDate - startDate);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end days
+                
+                // Display duration
+                if (diffDays > 0) {
+                    $('#duration-display').text(diffDays + ' day' + (diffDays > 1 ? 's' : ''));
+                } else {
+                    $('#duration-display').text('');
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

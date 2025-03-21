@@ -1,0 +1,274 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Sales Order{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Create Sales Order</h1>
+            <p class="text-muted">Create a new sales order for a customer</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Order Information</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" action="{{ url_for('sales.create_order') }}">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="customer" class="form-label">Customer</label>
+                        <select class="form-select" id="customer" name="customer_id" required>
+                            <option value="" selected disabled>Select Customer</option>
+                            {% if customers %}
+                                {% for customer in customers %}
+                                    <option value="{{ customer.id }}">{{ customer.name }}</option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="order_date" class="form-label">Order Date</label>
+                        <input type="date" class="form-control" id="order_date" name="order_date" required>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="payment_terms" class="form-label">Payment Terms</label>
+                        <select class="form-select" id="payment_terms" name="payment_terms">
+                            <option value="immediate">Immediate Payment</option>
+                            <option value="15days">15 Days</option>
+                            <option value="30days" selected>30 Days</option>
+                            <option value="60days">60 Days</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="sales_person" class="form-label">Sales Person</label>
+                        <select class="form-select" id="sales_person" name="sales_person_id">
+                            <option value="" selected disabled>Select Sales Person</option>
+                            {% if sales_persons %}
+                                {% for person in sales_persons %}
+                                    <option value="{{ person.id }}">{{ person.name }}</option>
+                                {% endfor %}
+                            {% endif %}
+                        </select>
+                    </div>
+                </div>
+                
+                <hr class="my-4">
+                
+                <h5 class="mb-3">Order Lines</h5>
+                
+                <div id="order-lines">
+                    <div class="order-line mb-3">
+                        <div class="row align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label">Product</label>
+                                <select class="form-select product-select" name="product_id[]" required>
+                                    <option value="" selected disabled>Select Product</option>
+                                    {% if products %}
+                                        {% for product in products %}
+                                            <option value="{{ product.id }}" data-price="{{ product.price }}">{{ product.name }}</option>
+                                        {% endfor %}
+                                    {% endif %}
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Quantity</label>
+                                <input type="number" class="form-control quantity-input" name="quantity[]" min="1" value="1" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Unit Price</label>
+                                <input type="number" class="form-control price-input" name="price[]" step="0.01" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Discount (%)</label>
+                                <input type="number" class="form-control discount-input" name="discount[]" min="0" max="100" value="0">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Subtotal</label>
+                                <input type="text" class="form-control subtotal-input" readonly>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <button type="button" id="add-line" class="btn btn-outline-secondary">
+                        <i class="fas fa-plus"></i> Add Product Line
+                    </button>
+                </div>
+                
+                <div class="row justify-content-end">
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8 text-end">
+                                        <strong>Subtotal:</strong>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <span id="subtotal">₵0.00</span>
+                                    </div>
+                                    <div class="col-md-8 text-end">
+                                        <strong>Tax:</strong>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <span id="tax">₵0.00</span>
+                                    </div>
+                                    <div class="col-md-8 text-end">
+                                        <strong>Total:</strong>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        <span id="total">₵0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <hr class="my-4">
+                
+                <div class="mb-3">
+                    <label for="notes" class="form-label">Notes</label>
+                    <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                </div>
+                
+                <div class="d-flex justify-content-end">
+                    <a href="{{ url_for('sales.orders') }}" class="btn btn-secondary me-2">Cancel</a>
+                    <button type="submit" name="action" value="save_draft" class="btn btn-outline-primary me-2">Save as Draft</button>
+                    <button type="submit" name="action" value="confirm" class="btn btn-primary">Confirm Order</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Select2 for better dropdown experience
+        if (typeof $.fn.select2 !== 'undefined') {
+            $('#customer, #sales_person, .product-select').select2({
+                theme: 'bootstrap-5'
+            });
+        }
+        
+        // Set today's date as default
+        document.getElementById('order_date').valueAsDate = new Date();
+        
+        // Add new order line
+        document.getElementById('add-line').addEventListener('click', function() {
+            const orderLines = document.getElementById('order-lines');
+            const newLine = document.querySelector('.order-line').cloneNode(true);
+            
+            // Clear values in the cloned line
+            newLine.querySelectorAll('input[type="number"], input[type="text"]').forEach(input => {
+                if (input.classList.contains('quantity-input')) {
+                    input.value = 1;
+                } else if (input.classList.contains('discount-input')) {
+                    input.value = 0;
+                } else {
+                    input.value = '';
+                }
+            });
+            
+            // Add remove button for all but the first line
+            if (document.querySelectorAll('.order-line').length > 0) {
+                const row = newLine.querySelector('.row');
+                const removeBtn = document.createElement('div');
+                removeBtn.className = 'col-auto ms-2 d-flex align-items-end mb-2';
+                removeBtn.innerHTML = '<button type="button" class="btn btn-outline-danger remove-line"><i class="fas fa-times"></i></button>';
+                row.appendChild(removeBtn);
+            }
+            
+            // Reinitialize Select2 for the new line if available
+            if (typeof $.fn.select2 !== 'undefined') {
+                setTimeout(() => {
+                    newLine.querySelector('.product-select').select2({
+                        theme: 'bootstrap-5'
+                    });
+                }, 0);
+            }
+            
+            // Add event listeners for the new line
+            addLineEventListeners(newLine);
+            
+            orderLines.appendChild(newLine);
+            updateTotals();
+        });
+        
+        // Add event listeners to the initial order line
+        addLineEventListeners(document.querySelector('.order-line'));
+        
+        // Event delegation for remove buttons
+        document.getElementById('order-lines').addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-line') || e.target.parentElement.classList.contains('remove-line')) {
+                const button = e.target.classList.contains('remove-line') ? e.target : e.target.parentElement;
+                const orderLine = button.closest('.order-line');
+                orderLine.remove();
+                updateTotals();
+            }
+        });
+        
+        // Function to add event listeners to an order line
+        function addLineEventListeners(line) {
+            const productSelect = line.querySelector('.product-select');
+            const quantityInput = line.querySelector('.quantity-input');
+            const priceInput = line.querySelector('.price-input');
+            const discountInput = line.querySelector('.discount-input');
+            
+            // Update price when product is selected
+            productSelect.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                if (selectedOption.value) {
+                    const price = selectedOption.getAttribute('data-price');
+                    priceInput.value = price;
+                    updateSubtotal(line);
+                }
+            });
+            
+            // Update subtotal when quantity, price or discount changes
+            [quantityInput, priceInput, discountInput].forEach(input => {
+                input.addEventListener('input', function() {
+                    updateSubtotal(line);
+                });
+            });
+        }
+        
+        // Function to update subtotal for a line
+        function updateSubtotal(line) {
+            const quantity = parseFloat(line.querySelector('.quantity-input').value) || 0;
+            const price = parseFloat(line.querySelector('.price-input').value) || 0;
+            const discount = parseFloat(line.querySelector('.discount-input').value) || 0;
+            
+            const subtotal = quantity * price * (1 - discount / 100);
+            line.querySelector('.subtotal-input').value = '₵' + subtotal.toFixed(2);
+            
+            updateTotals();
+        }
+        
+        // Function to update order totals
+        function updateTotals() {
+            let subtotal = 0;
+            
+            document.querySelectorAll('.order-line').forEach(line => {
+                const lineSubtotal = parseFloat(line.querySelector('.subtotal-input').value.replace('₵', '')) || 0;
+                subtotal += lineSubtotal;
+            });
+            
+            const tax = subtotal * 0.1; // 10% tax
+            const total = subtotal + tax;
+            
+            document.getElementById('subtotal').textContent = '₵' + subtotal.toFixed(2);
+            document.getElementById('tax').textContent = '₵' + tax.toFixed(2);
+            document.getElementById('total').textContent = '₵' + total.toFixed(2);
+        }
+    });
+</script>
+{% endblock %}

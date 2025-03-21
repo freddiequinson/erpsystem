@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block title %}POS Payment Methods{% endblock %}
+
+{% block styles %}
+<style>
+    .payment-methods-container {
+        padding: 20px;
+    }
+    .card {
+        margin-bottom: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .card-header {
+        background-color: #6c5ce7;
+        color: white;
+        border-radius: 10px 10px 0 0 !important;
+        padding: 15px 20px;
+    }
+    .table th {
+        background-color: #f8f9fa;
+    }
+    .badge-status {
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-weight: normal;
+    }
+    .badge-active {
+        background-color: #00b894;
+        color: white;
+    }
+    .badge-inactive {
+        background-color: #d63031;
+        color: white;
+    }
+    .badge-cash {
+        background-color: #fdcb6e;
+        color: #333;
+    }
+    .payment-actions .btn {
+        padding: 5px 10px;
+        margin-right: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="payment-methods-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-credit-card me-2"></i> Payment Methods</h2>
+        <a href="{{ url_for('pos.index') }}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-2"></i> Back to POS
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Payment Method List</h5>
+            <a href="{{ url_for('pos.new_payment_method') }}" class="btn btn-sm btn-light">
+                <i class="fas fa-plus me-1"></i> Add New
+            </a>
+        </div>
+        <div class="card-body">
+            {% if payment_methods %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Code</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for method in payment_methods %}
+                        <tr>
+                            <td>{{ method.id }}</td>
+                            <td>{{ method.name }}</td>
+                            <td>{{ method.code }}</td>
+                            <td>
+                                {% if method.is_cash %}
+                                <span class="badge badge-status badge-cash">Cash</span>
+                                {% else %}
+                                <span class="badge badge-status bg-info text-white">Non-Cash</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if method.is_active %}
+                                <span class="badge badge-status badge-active">Active</span>
+                                {% else %}
+                                <span class="badge badge-status badge-inactive">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td class="payment-actions">
+                                <a href="#" class="btn btn-sm btn-primary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="#" class="btn btn-sm btn-danger" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-credit-card fa-3x text-muted mb-3"></i>
+                <h5>No payment methods found</h5>
+                <p class="text-muted">Add a payment method to begin accepting payments</p>
+                <a href="{{ url_for('pos.new_payment_method') }}" class="btn btn-primary mt-2">
+                    <i class="fas fa-plus me-1"></i> Add Payment Method
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

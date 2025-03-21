@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+
+{% block title %}Employee Sales Statistics{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4>Employee Sales Statistics</h4>
+                    <div>
+                        <form class="d-flex" method="GET">
+                            <select name="period" class="form-select me-2" onchange="this.form.submit()">
+                                <option value="today" {% if period == 'today' %}selected{% endif %}>Today</option>
+                                <option value="week" {% if period == 'week' %}selected{% endif %}>This Week</option>
+                                <option value="month" {% if period == 'month' %}selected{% endif %}>This Month</option>
+                                <option value="year" {% if period == 'year' %}selected{% endif %}>This Year</option>
+                                <option value="all" {% if period == 'all' %}selected{% endif %}>All Time</option>
+                            </select>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if employees %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Job Position</th>
+                                    <th>Department</th>
+                                    <th>Orders</th>
+                                    <th>Total Sales</th>
+                                    <th>Average Sale</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for employee in employees %}
+                                <tr>
+                                    <td>
+                                        <a href="{{ url_for('employees.view_employee', employee_id=employee.id) }}">
+                                            {{ employee.full_name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ employee.job_position.name if employee.job_position else 'N/A' }}</td>
+                                    <td>{{ employee.department.name if employee.department else 'N/A' }}</td>
+                                    <td>{{ employee_stats[employee.id]['orders'] }}</td>
+                                    <td>{{ currency_symbol }} {{ "%.2f"|format(employee_stats[employee.id]['sales']) }}</td>
+                                    <td>
+                                        {% if employee_stats[employee.id]['orders'] > 0 %}
+                                            {{ currency_symbol }} {{ "%.2f"|format(employee_stats[employee.id]['sales'] / employee_stats[employee.id]['orders']) }}
+                                        {% else %}
+                                            {{ currency_symbol }} 0.00
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('pos.employee_sales_detail', employee_id=employee.id) }}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-chart-line"></i> Details
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Sales Chart -->
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Top Performing Employees</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="employeeSalesChart" width="400" height="300"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>Sales by Department</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="departmentSalesChart" width="400" height="300"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        No employee sales data found for the selected period.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if employees and employee_stats %}
+        // Employee Sales Chart
+        var employeeCtx = document.getElementById('employeeSalesChart').getContext('2d');
+        var employeeChart = new Chart(employeeCtx, {
+            type: 'bar',
+            data: {
+                labels: [
+                    {% for employee in employees %}
+                        {% if loop.index <= 5 %}
+                            "{{ employee.full_name }}",
+                        {% endif %}
+                    {% endfor %}
+                ],
+                datasets: [{
+                    label: 'Sales Amount ({{ currency_symbol }})',
+                    data: [
+                        {% for employee in employees %}
+                            {% if loop.index <= 5 %}
+                                {{ employee_stats[employee.id]['sales'] }},
+                            {% endif %}
+                        {% endfor %}
+                    ],
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+        
+        // Department Sales Chart
+        var departmentCtx = document.getElementById('departmentSalesChart').getContext('2d');
+        var departmentChart = new Chart(departmentCtx, {
+            type: 'pie',
+            data: {
+                labels: [
+                    {% for dept_id, dept_data in department_stats.items() %}
+                        "{{ dept_data['name'] }}",
+                    {% endfor %}
+                ],
+                datasets: [{
+                    label: 'Sales by Department',
+                    data: [
+                        {% for dept_id, dept_data in department_stats.items() %}
+                            {{ dept_data['sales'] }},
+                        {% endfor %}
+                    ],
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(255, 206, 86, 0.6)',
+                        'rgba(75, 192, 192, 0.6)',
+                        'rgba(153, 102, 255, 0.6)',
+                        'rgba(255, 159, 64, 0.6)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            }
+        });
+        {% endif %}
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,345 @@
+{% extends 'base.html' %}
+
+{% block title %}Sales Reports{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Sales Reports</h1>
+            <p class="text-muted">Generate and download sales reports for analysis</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Sales by Period</h5>
+                </div>
+                <div class="card-body">
+                    <p>Generate a report of sales for a specific time period.</p>
+                    <form action="{{ url_for('sales.generate_sales_report') }}" method="post">
+                        <div class="mb-3">
+                            <label for="period" class="form-label">Period</label>
+                            <select class="form-select" id="period" name="period">
+                                <option value="today">Today</option>
+                                <option value="yesterday">Yesterday</option>
+                                <option value="this_week">This Week</option>
+                                <option value="last_week">Last Week</option>
+                                <option value="this_month" selected>This Month</option>
+                                <option value="last_month">Last Month</option>
+                                <option value="this_quarter">This Quarter</option>
+                                <option value="last_quarter">Last Quarter</option>
+                                <option value="this_year">This Year</option>
+                                <option value="last_year">Last Year</option>
+                                <option value="custom">Custom Date Range</option>
+                            </select>
+                        </div>
+                        <div id="customDateRange" class="d-none">
+                            <div class="mb-3">
+                                <label for="start_date" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date">
+                            </div>
+                            <div class="mb-3">
+                                <label for="end_date" class="form-label">End Date</label>
+                                <input type="date" class="form-control" id="end_date" name="end_date">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="format" class="form-label">Format</label>
+                            <select class="form-select" id="format" name="format">
+                                <option value="pdf">PDF</option>
+                                <option value="excel">Excel</option>
+                                <option value="csv">CSV</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Generate Report</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Sales by Customer</h5>
+                </div>
+                <div class="card-body">
+                    <p>Generate a report of sales grouped by customer.</p>
+                    <form action="{{ url_for('sales.generate_customer_report') }}" method="post">
+                        <div class="mb-3">
+                            <label for="customer_id" class="form-label">Customer</label>
+                            <select class="form-select" id="customer_id" name="customer_id">
+                                <option value="all" selected>All Customers</option>
+                                {% for customer in customers %}
+                                <option value="{{ customer.id }}">{{ customer.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="customer_date_range" class="form-label">Date Range</label>
+                            <select class="form-select" id="customer_date_range" name="period">
+                                <option value="this_month" selected>This Month</option>
+                                <option value="last_month">Last Month</option>
+                                <option value="this_quarter">This Quarter</option>
+                                <option value="last_quarter">Last Quarter</option>
+                                <option value="this_year">This Year</option>
+                                <option value="last_year">Last Year</option>
+                                <option value="all_time">All Time</option>
+                                <option value="custom">Custom Date Range</option>
+                            </select>
+                        </div>
+                        <div id="customerCustomDateRange" class="d-none">
+                            <div class="mb-3">
+                                <label for="customer_start_date" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="customer_start_date" name="start_date">
+                            </div>
+                            <div class="mb-3">
+                                <label for="customer_end_date" class="form-label">End Date</label>
+                                <input type="date" class="form-control" id="customer_end_date" name="end_date">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="customer_format" class="form-label">Format</label>
+                            <select class="form-select" id="customer_format" name="format">
+                                <option value="pdf">PDF</option>
+                                <option value="excel">Excel</option>
+                                <option value="csv">CSV</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Generate Report</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Product Sales Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <p>Generate a report of sales by product.</p>
+                    <form action="{{ url_for('sales.generate_product_report') }}" method="post">
+                        <div class="mb-3">
+                            <label for="product_id" class="form-label">Product</label>
+                            <select class="form-select" id="product_id" name="product_id">
+                                <option value="all" selected>All Products</option>
+                                {% for product in products %}
+                                <option value="{{ product.id }}">{{ product.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="product_date_range" class="form-label">Date Range</label>
+                            <select class="form-select" id="product_date_range" name="period">
+                                <option value="this_month" selected>This Month</option>
+                                <option value="last_month">Last Month</option>
+                                <option value="this_quarter">This Quarter</option>
+                                <option value="last_quarter">Last Quarter</option>
+                                <option value="this_year">This Year</option>
+                                <option value="last_year">Last Year</option>
+                                <option value="all_time">All Time</option>
+                                <option value="custom">Custom Date Range</option>
+                            </select>
+                        </div>
+                        <div id="productCustomDateRange" class="d-none">
+                            <div class="mb-3">
+                                <label for="product_start_date" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="product_start_date" name="start_date">
+                            </div>
+                            <div class="mb-3">
+                                <label for="product_end_date" class="form-label">End Date</label>
+                                <input type="date" class="form-control" id="product_end_date" name="end_date">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="product_format" class="form-label">Format</label>
+                            <select class="form-select" id="product_format" name="format">
+                                <option value="pdf">PDF</option>
+                                <option value="excel">Excel</option>
+                                <option value="csv">CSV</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Generate Report</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Payment Collection Report</h5>
+                </div>
+                <div class="card-body">
+                    <p>Generate a report of payment collections.</p>
+                    <form action="{{ url_for('sales.generate_payment_report') }}" method="post">
+                        <div class="mb-3">
+                            <label for="payment_method" class="form-label">Payment Method</label>
+                            <select class="form-select" id="payment_method" name="payment_method">
+                                <option value="all" selected>All Methods</option>
+                                <option value="cash">Cash</option>
+                                <option value="bank_transfer">Bank Transfer</option>
+                                <option value="credit_card">Credit Card</option>
+                                <option value="check">Check</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="payment_date_range" class="form-label">Date Range</label>
+                            <select class="form-select" id="payment_date_range" name="period">
+                                <option value="this_month" selected>This Month</option>
+                                <option value="last_month">Last Month</option>
+                                <option value="this_quarter">This Quarter</option>
+                                <option value="last_quarter">Last Quarter</option>
+                                <option value="this_year">This Year</option>
+                                <option value="last_year">Last Year</option>
+                                <option value="all_time">All Time</option>
+                                <option value="custom">Custom Date Range</option>
+                            </select>
+                        </div>
+                        <div id="paymentCustomDateRange" class="d-none">
+                            <div class="mb-3">
+                                <label for="payment_start_date" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="payment_start_date" name="start_date">
+                            </div>
+                            <div class="mb-3">
+                                <label for="payment_end_date" class="form-label">End Date</label>
+                                <input type="date" class="form-control" id="payment_end_date" name="end_date">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="payment_format" class="form-label">Format</label>
+                            <select class="form-select" id="payment_format" name="format">
+                                <option value="pdf">PDF</option>
+                                <option value="excel">Excel</option>
+                                <option value="csv">CSV</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Generate Report</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Accounts Receivable Aging</h5>
+                </div>
+                <div class="card-body">
+                    <p>Generate an accounts receivable aging report to track overdue invoices.</p>
+                    <form action="{{ url_for('sales.generate_aging_report') }}" method="post">
+                        <div class="mb-3">
+                            <label for="aging_customer_id" class="form-label">Customer</label>
+                            <select class="form-select" id="aging_customer_id" name="customer_id">
+                                <option value="all" selected>All Customers</option>
+                                {% for customer in customers %}
+                                <option value="{{ customer.id }}">{{ customer.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="aging_as_of_date" class="form-label">As of Date</label>
+                            <input type="date" class="form-control" id="aging_as_of_date" name="as_of_date" value="{{ today }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="aging_buckets" class="form-label">Aging Buckets</label>
+                            <select class="form-select" id="aging_buckets" name="aging_buckets">
+                                <option value="30_60_90" selected>30/60/90 Days</option>
+                                <option value="7_14_30_60">7/14/30/60 Days</option>
+                                <option value="custom">Custom</option>
+                            </select>
+                        </div>
+                        <div id="customAgingBuckets" class="d-none">
+                            <div class="mb-3">
+                                <label for="custom_buckets" class="form-label">Custom Buckets (comma-separated days)</label>
+                                <input type="text" class="form-control" id="custom_buckets" name="custom_buckets" placeholder="30,60,90">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="aging_format" class="form-label">Format</label>
+                            <select class="form-select" id="aging_format" name="format">
+                                <option value="pdf">PDF</option>
+                                <option value="excel">Excel</option>
+                                <option value="csv">CSV</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Generate Report</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Show/hide custom date range for sales by period
+        const periodSelect = document.getElementById('period');
+        const customDateRange = document.getElementById('customDateRange');
+        
+        periodSelect.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                customDateRange.classList.remove('d-none');
+            } else {
+                customDateRange.classList.add('d-none');
+            }
+        });
+        
+        // Show/hide custom date range for customer report
+        const customerDateRange = document.getElementById('customer_date_range');
+        const customerCustomDateRange = document.getElementById('customerCustomDateRange');
+        
+        customerDateRange.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                customerCustomDateRange.classList.remove('d-none');
+            } else {
+                customerCustomDateRange.classList.add('d-none');
+            }
+        });
+        
+        // Show/hide custom date range for product report
+        const productDateRange = document.getElementById('product_date_range');
+        const productCustomDateRange = document.getElementById('productCustomDateRange');
+        
+        productDateRange.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                productCustomDateRange.classList.remove('d-none');
+            } else {
+                productCustomDateRange.classList.add('d-none');
+            }
+        });
+        
+        // Show/hide custom date range for payment report
+        const paymentDateRange = document.getElementById('payment_date_range');
+        const paymentCustomDateRange = document.getElementById('paymentCustomDateRange');
+        
+        paymentDateRange.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                paymentCustomDateRange.classList.remove('d-none');
+            } else {
+                paymentCustomDateRange.classList.add('d-none');
+            }
+        });
+        
+        // Show/hide custom aging buckets
+        const agingBuckets = document.getElementById('aging_buckets');
+        const customAgingBuckets = document.getElementById('customAgingBuckets');
+        
+        agingBuckets.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                customAgingBuckets.classList.remove('d-none');
+            } else {
+                customAgingBuckets.classList.add('d-none');
+            }
+        });
+    });
+</script>
+{% endblock %}

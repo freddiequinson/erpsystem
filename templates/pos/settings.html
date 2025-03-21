@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+
+{% block title %}POS General Settings{% endblock %}
+
+{% block styles %}
+<style>
+    .settings-container {
+        padding: 20px;
+    }
+    .card {
+        margin-bottom: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .card-header {
+        background-color: #6c5ce7;
+        color: white;
+        border-radius: 10px 10px 0 0 !important;
+        padding: 15px 20px;
+    }
+    .form-control:focus {
+        border-color: #6c5ce7;
+        box-shadow: 0 0 0 0.2rem rgba(108, 92, 231, 0.25);
+    }
+    .btn-primary {
+        background-color: #6c5ce7;
+        border-color: #6c5ce7;
+    }
+    .btn-primary:hover {
+        background-color: #5f50e6;
+        border-color: #5f50e6;
+    }
+    .form-check-input:checked {
+        background-color: #6c5ce7;
+        border-color: #6c5ce7;
+    }
+    .settings-section {
+        border-bottom: 1px solid #e9ecef;
+        padding-bottom: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .settings-section:last-child {
+        border-bottom: none;
+    }
+    .settings-title {
+        font-weight: 600;
+        color: #2d3436;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-cogs me-2"></i> POS General Settings</h2>
+        <a href="{{ url_for('pos.index') }}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-2"></i> Back to POS
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Configure POS Settings</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                
+                <div class="settings-section">
+                    <h4 class="settings-title">Currency Settings</h4>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="currency_symbol" class="form-label">Currency Symbol</label>
+                                {{ form.currency_symbol(class="form-control") }}
+                                <div class="form-text">This symbol will be displayed next to all monetary values (e.g., ₵)</div>
+                                {% if form.currency_symbol.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.currency_symbol.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h4 class="settings-title">Customer Settings</h4>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="default_customer_id" class="form-label">Default Customer</label>
+                                {{ form.default_customer_id(class="form-control") }}
+                                <div class="form-text">This customer will be automatically selected when creating a new order</div>
+                                {% if form.default_customer_id.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.default_customer_id.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h4 class="settings-title">Inventory Settings</h4>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check mb-3">
+                                {{ form.allow_negative_stock(class="form-check-input") }}
+                                <label class="form-check-label" for="allow_negative_stock">
+                                    Allow Negative Stock
+                                </label>
+                                <div class="form-text">If enabled, products can be sold even when inventory is insufficient</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h4 class="settings-title">POS Interface Settings</h4>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check mb-3">
+                                {{ form.restrict_price_edit(class="form-check-input") }}
+                                <label class="form-check-label" for="restrict_price_edit">
+                                    Restrict Price Editing
+                                </label>
+                                <div class="form-text">If enabled, cashiers cannot change product prices during checkout</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check mb-3">
+                                {{ form.auto_print_receipt(class="form-check-input") }}
+                                <label class="form-check-label" for="auto_print_receipt">
+                                    Auto-Print Receipt
+                                </label>
+                                <div class="form-text">If enabled, receipts will automatically print after payment</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <a href="{{ url_for('pos.index') }}" class="btn btn-outline-secondary me-md-2">Cancel</a>
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

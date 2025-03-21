@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+
+{% block title %}Process Quality Checks {{ return_filter if return_filter else '' }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Process Quality Checks {{ return_filter if return_filter else '' }}</h1>
+            <p class="text-muted">Evaluate returned products one by one</p>
+        </div>
+        <div class="col-auto">
+            {% if return_id %}
+            <a href="{{ url_for('pos.return_quality_checks', return_id=return_id) }}" class="btn btn-outline-secondary me-2">
+                <i class="fas fa-list me-1"></i> View All Checks
+            </a>
+            <a href="{{ url_for('pos.return_detail', return_id=return_id) }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back to Return
+            </a>
+            {% else %}
+            <a href="{{ url_for('pos.quality_dashboard') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if pending_lines %}
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <!-- Progress bar for overall completion -->
+            <div class="progress mb-4">
+                {% set total_items = pending_lines|length + completed_checks|length %}
+                {% set completed_percentage = (completed_checks|length / total_items * 100) if total_items > 0 else 0 %}
+                {% set width_class = "w-" ~ completed_percentage|int %}
+                <div class="progress-bar progress-bar-resellable {{ width_class }}" role="progressbar">
+                    {{ completed_checks|length }} / {{ total_items }} Items Checked ({{ completed_percentage|int }}%)
+                </div>
+            </div>
+
+            <!-- Current item being processed -->
+            {% set current_line = pending_lines[0] %}
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clipboard-check me-2"></i> 
+                        Processing Item {{ completed_checks|length + 1 }} of {{ total_items }}
+                    </h5>
+                    <span class="badge bg-light text-dark">
+                        Return #{{ current_line.pos_return.name }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Product Information</h6>
+                            <p><strong>Product:</strong> {{ current_line.product.name }}</p>
+                            <p><strong>SKU:</strong> {{ current_line.product.sku }}</p>
+                            <p><strong>Quantity:</strong> {{ current_line.quantity }}</p>
+                            <p><strong>Return Reason:</strong> {{ current_line.return_reason }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Return Information</h6>
+                            <p><strong>Return Reference:</strong> {{ current_line.pos_return.name }}</p>
+                            <p><strong>Customer:</strong> {{ current_line.pos_return.customer_name }}</p>
+                            <p><strong>Return Date:</strong> {{ current_line.pos_return.return_date.strftime('%d/%m/%Y') }}</p>
+                        </div>
+                    </div>
+
+                    <form method="POST" action="{{ url_for('pos.process_quality_check', return_line_id=current_line.id) }}">
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="check_quantity" class="form-label"><strong>Quantity to Process:</strong></label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" id="check_quantity" name="check_quantity" 
+                                               min="1" max="{{ current_line.quantity }}" value="{{ current_line.quantity }}" step="1" required>
+                                        <span class="input-group-text">of {{ current_line.quantity }} units</span>
+                                    </div>
+                                    <small class="form-text text-muted">Specify how many units you want to process with this quality check.</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card mb-3 h-100">
+                                    <div class="card-body text-center">
+                                        <h5 class="card-title text-success">Not Defective</h5>
+                                        <p class="card-text">Product is in good condition and can be returned to inventory</p>
+                                        <button type="submit" name="quality_state" value="not_defective" class="btn btn-success btn-lg w-100">
+                                            <i class="fas fa-check-circle me-2"></i> Return to Stock
+                                        </button>
+                                        <input type="hidden" name="disposition" value="stock" id="disposition_stock">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card mb-3 h-100">
+                                    <div class="card-body text-center">
+                                        <h5 class="card-title text-danger">Defective</h5>
+                                        <p class="card-text">Product is damaged or defective and should be scrapped</p>
+                                        <button type="submit" name="quality_state" value="major_defect" class="btn btn-danger btn-lg w-100">
+                                            <i class="fas fa-trash-alt me-2"></i> Send to Scrap
+                                        </button>
+                                        <input type="hidden" name="disposition" value="scrap" id="disposition_scrap">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 mt-3">
+                            <label for="notes" class="form-label">Notes (Optional)</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="2" placeholder="Additional details about the product condition"></textarea>
+                        </div>
+                        
+                        <!-- Add return_id as hidden field if it exists -->
+                        {% if return_id %}
+                        <input type="hidden" name="return_id" value="{{ return_id }}">
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('pos.quality_dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-pause-circle me-1"></i> Pause Processing
+                </a>
+                
+                <a href="{{ url_for('pos.skip_quality_check', return_line_id=current_line.id, return_id=return_id) }}" class="btn btn-outline-primary">
+                    Skip <i class="fas fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                    <h3>All Returns Processed</h3>
+                    <p class="text-muted">There are no pending returns to check.</p>
+                    <div class="mt-4">
+                        {% if return_id %}
+                        <a href="{{ url_for('pos.return_detail', return_id=return_id) }}" class="btn btn-primary">
+                            <i class="fas fa-arrow-left me-1"></i> Back to Return
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('pos.returns') }}" class="btn btn-primary">
+                            <i class="fas fa-exchange-alt me-1"></i> View All Returns
+                        </a>
+                        {% endif %}
+                        <a href="{{ url_for('pos.quality_dashboard') }}" class="btn btn-outline-secondary ms-2">
+                            <i class="fas fa-chart-bar me-1"></i> Quality Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle quality state selection
+        const passButton = document.querySelector('button[value="not_defective"]');
+        const defectButton = document.querySelector('button[value="major_defect"]');
+        
+        if (passButton && defectButton) {
+            passButton.addEventListener('click', function() {
+                document.getElementById('disposition_stock').value = 'stock';
+            });
+            
+            defectButton.addEventListener('click', function() {
+                document.getElementById('disposition_scrap').value = 'scrap';
+            });
+        }
+    });
+</script>
+{% endblock %}

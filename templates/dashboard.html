@@ -1,0 +1,363 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Dashboard</h1>
+            <p class="text-muted">
+                Welcome to your ERP System Dashboard
+                {% if branch_name != 'All Branches' %}
+                <span class="badge bg-info">{{ branch_name }}</span>
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Quick Stats -->
+        <div class="col-md-3 mb-4">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase">Employees</h6>
+                            <h2 class="mb-0">{{ employee_count }}</h2>
+                        </div>
+                        <i class="fas fa-users fa-3x opacity-50"></i>
+                    </div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a href="{{ url_for('employees.index') }}" class="text-white">View Details</a>
+                    <i class="fas fa-angle-right"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-4">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase">Products</h6>
+                            <h2 class="mb-0">{{ product_count }}</h2>
+                        </div>
+                        <i class="fas fa-boxes fa-3x opacity-50"></i>
+                    </div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a href="{{ url_for('inventory.products') }}" class="text-white">View Details</a>
+                    <i class="fas fa-angle-right"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-4">
+            <div class="card bg-warning text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase">Returns</h6>
+                            <h2 class="mb-0">{{ return_count }}</h2>
+                        </div>
+                        <i class="fas fa-exchange-alt fa-3x opacity-50"></i>
+                    </div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <a href="#" onclick="alert('Returns functionality not implemented yet.'); return false;" class="text-white">View Details</a>
+                    <i class="fas fa-angle-right"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-4">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase">Today's Sales</h6>
+                            <h2 class="mb-0">₵{{ "%.2f"|format(pos_sales_today) }}</h2>
+                        </div>
+                        <i class="fas fa-money-bill-wave fa-3x opacity-50"></i>
+                    </div>
+                </div>
+                <div class="card-footer d-flex align-items-center justify-content-between">
+                    <span class="text-white">Weekly: ₵{{ "%.2f"|format(pos_sales_week) }}</span>
+                    <i class="fas fa-chart-line"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Recent Activities -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Activities</h5>
+                    <a href="{{ url_for('all_activities') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% if activities %}
+                            {% for activity in activities %}
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ activity.description }}</h6>
+                                    <small>{{ activity.timestamp.strftime('%d/%m/%Y %H:%M') }}</small>
+                                </div>
+                                <p class="mb-1">{{ activity.details }}</p>
+                                <small>{{ activity.user }}</small>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-3">
+                                <p class="text-muted">No recent activities</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upcoming Events -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Upcoming Events</h5>
+                    <a href="{{ url_for('all_events') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% if events %}
+                            {% for event in events %}
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ event.title }}</h6>
+                                    <small>
+                                        {% if event.date is string %}
+                                            {{ event.date }}
+                                        {% else %}
+                                            {{ event.date.strftime('%d/%m/%Y %H:%M') }}
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                <p class="mb-1">{{ event.description }}</p>
+                                <small>
+                                    <i class="fas fa-map-marker-alt me-1"></i> {{ event.location }}
+                                    {% if event.event_type %}
+                                    <span class="ms-2 badge bg-info">{{ event.event_type }}</span>
+                                    {% endif %}
+                                </small>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-3">
+                                <p class="text-muted">No upcoming events</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Recent POS Transactions -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent POS Transactions</h5>
+                    <a href="{{ url_for('sales.orders') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_orders %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Order</th>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in recent_orders %}
+                                <tr>
+                                    <td>{{ order.name }}</td>
+                                    <td>{{ order.order_date.strftime('%d/%m/%Y') }}</td>
+                                    <td>GH₵{{ "%.2f"|format(order.total_amount) }}</td>
+                                    <td>
+                                        <span class="badge {% if order.state == 'draft' %}bg-secondary{% elif order.state == 'paid' %}bg-success{% else %}bg-warning{% endif %}">
+                                            {{ order.state|capitalize }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
+                        <p>No recent transactions</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Returns -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Returns</h5>
+                    <a href="#" onclick="alert('Returns functionality not implemented yet.'); return false;" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_returns %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Reference</th>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for return in recent_returns %}
+                                <tr>
+                                    <td>{{ return.name }}</td>
+                                    <td>{{ return.return_date.strftime('%d/%m/%Y') }}</td>
+                                    <td>GH₵{{ "%.2f"|format(return.total_amount) }}</td>
+                                    <td>
+                                        <span class="badge {% if return.state == 'draft' %}bg-warning{% elif return.state == 'validated' %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ return.state|capitalize }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-exchange-alt fa-3x text-muted mb-3"></i>
+                        <p>No recent returns</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Low Stock Products -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Low Stock Products</h5>
+                        <a href="{{ url_for('inventory.low_stock_report') }}" class="btn btn-sm btn-outline-success">
+                            <i class="fas fa-file-excel"></i> Download Report
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if low_stock_products %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>SKU</th>
+                                    <th>Available</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in low_stock_products %}
+                                <tr>
+                                    <td>{{ product.name }}</td>
+                                    <td>{{ product.sku }}</td>
+                                    <td>
+                                        {% if product.available_quantity <= 0 %}
+                                            <span class="badge bg-danger">{{ product.available_quantity }}</span>
+                                        {% elif product.available_quantity < 5 %}
+                                            <span class="badge bg-warning text-dark">{{ product.available_quantity }}</span>
+                                        {% else %}
+                                            {{ product.available_quantity }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if product.available_quantity <= 0 %}
+                                            <span class="badge bg-danger">Out of Stock</span>
+                                        {% elif product.available_quantity < 5 %}
+                                            <span class="badge bg-warning text-dark">Low Stock</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('inventory.new_stock_move') }}?product_id={{ product.id }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-plus-circle"></i> Restock
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-boxes fa-3x text-muted mb-3"></i>
+                        <p>No low stock products</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <a href="{{ url_for('employees.new_employee') }}" class="btn btn-outline-primary btn-lg w-100">
+                                <i class="fas fa-user-plus mb-2"></i><br>
+                                New Employee
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{{ url_for('inventory.new_product') }}" class="btn btn-outline-success btn-lg w-100">
+                                <i class="fas fa-box-open mb-2"></i><br>
+                                New Product
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{{ url_for('sales.new_order') }}" class="btn btn-outline-warning btn-lg w-100">
+                                <i class="fas fa-file-invoice-dollar mb-2"></i><br>
+                                New Sales Order
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{{ url_for('purchase.new_order') }}" class="btn btn-outline-danger btn-lg w-100">
+                                <i class="fas fa-shopping-basket mb-2"></i><br>
+                                New Purchase Order
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

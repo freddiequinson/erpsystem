@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+
+{% block title %}Stock Movements{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Stock Movements</h1>
+            <p class="text-muted">Track product stock movements across warehouses</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('inventory.create_stock_movement') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> New Stock Movement
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <ul class="nav nav-tabs card-header-tabs">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('inventory.products') }}">Products</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('inventory.categories') }}">Categories</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('inventory.warehouses') }}">Warehouses</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="{{ url_for('inventory.stock_movements') }}">Stock Movements</a>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body">
+            <div class="mb-4">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="product" class="form-label">Product</label>
+                        <select name="product_id" id="product" class="form-select">
+                            <option value="">All Products</option>
+                            {% for product in all_products %}
+                            <option value="{{ product.id }}" {% if request.args.get('product_id')|int == product.id %}selected{% endif %}>{{ product.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="warehouse" class="form-label">Warehouse</label>
+                        <select name="warehouse_id" id="warehouse" class="form-select">
+                            <option value="">All Warehouses</option>
+                            {% for warehouse in all_warehouses %}
+                            <option value="{{ warehouse.id }}" {% if request.args.get('warehouse_id')|int == warehouse.id %}selected{% endif %}>{{ warehouse.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="movement_type" class="form-label">Movement Type</label>
+                        <select name="movement_type" id="movement_type" class="form-select">
+                            <option value="">All Types</option>
+                            <option value="in" {% if request.args.get('movement_type') == 'in' %}selected{% endif %}>Stock In</option>
+                            <option value="out" {% if request.args.get('movement_type') == 'out' %}selected{% endif %}>Stock Out</option>
+                            <option value="transfer" {% if request.args.get('movement_type') == 'transfer' %}selected{% endif %}>Transfer</option>
+                            <option value="adjustment" {% if request.args.get('movement_type') == 'adjustment' %}selected{% endif %}>Adjustment</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="date_range" class="form-label">Date Range</label>
+                        <select name="date_range" id="date_range" class="form-select">
+                            <option value="7" {% if request.args.get('date_range') == '7' %}selected{% endif %}>Last 7 days</option>
+                            <option value="30" {% if request.args.get('date_range') == '30' %}selected{% endif %}>Last 30 days</option>
+                            <option value="90" {% if request.args.get('date_range') == '90' %}selected{% endif %}>Last 90 days</option>
+                            <option value="all" {% if request.args.get('date_range') == 'all' %}selected{% endif %}>All time</option>
+                        </select>
+                    </div>
+                    <div class="col-12 mt-3">
+                        <button type="submit" class="btn btn-primary">Filter</button>
+                        <a href="{{ url_for('inventory.stock_movements') }}" class="btn btn-secondary">Reset</a>
+                    </div>
+                </form>
+            </div>
+
+            {% if movements %}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Reference</th>
+                            <th>Date</th>
+                            <th>Product</th>
+                            <th>Warehouse</th>
+                            <th>Type</th>
+                            <th>Quantity</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for movement in movements %}
+                        <tr>
+                            <td>{{ movement.reference }}</td>
+                            <td>{{ movement.date.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ movement.product.name }}</td>
+                            <td>{{ movement.warehouse.name }}</td>
+                            <td>
+                                {% if movement.movement_type == 'in' %}
+                                <span class="badge bg-success">Stock In</span>
+                                {% elif movement.movement_type == 'out' %}
+                                <span class="badge bg-danger">Stock Out</span>
+                                {% elif movement.movement_type == 'transfer' %}
+                                <span class="badge bg-info">Transfer</span>
+                                {% elif movement.movement_type == 'adjustment' %}
+                                <span class="badge bg-warning">Adjustment</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if movement.movement_type == 'in' or movement.movement_type == 'transfer' %}
+                                <span class="text-success">+{{ movement.quantity }}</span>
+                                {% elif movement.movement_type == 'out' %}
+                                <span class="text-danger">-{{ movement.quantity }}</span>
+                                {% elif movement.movement_type == 'adjustment' %}
+                                {% if movement.quantity > 0 %}
+                                <span class="text-success">+{{ movement.quantity }}</span>
+                                {% else %}
+                                <span class="text-danger">{{ movement.quantity }}</span>
+                                {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if movement.status == 'draft' %}
+                                <span class="badge bg-secondary">Draft</span>
+                                {% elif movement.status == 'validated' %}
+                                <span class="badge bg-success">Validated</span>
+                                {% elif movement.status == 'cancelled' %}
+                                <span class="badge bg-danger">Cancelled</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{{ url_for('inventory.view_stock_movement', movement_id=movement.id) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if movement.status == 'draft' %}
+                                    <a href="{{ url_for('inventory.edit_stock_movement', movement_id=movement.id) }}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{{ url_for('inventory.validate_stock_movement', movement_id=movement.id) }}" class="btn btn-sm btn-outline-success" onclick="return confirm('Are you sure you want to validate this stock movement?');">
+                                        <i class="fas fa-check"></i>
+                                    </a>
+                                    <a href="{{ url_for('inventory.cancel_stock_movement', movement_id=movement.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to cancel this stock movement?');">
+                                        <i class="fas fa-times"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-exchange-alt fa-4x text-muted mb-3"></i>
+                <p class="lead">No stock movements found</p>
+                <a href="{{ url_for('inventory.create_stock_movement') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Create Stock Movement
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize select2 for dropdown fields
+        $('#product, #warehouse, #movement_type, #date_range').select2({
+            theme: 'bootstrap-5'
+        });
+    });
+</script>
+{% endblock %}

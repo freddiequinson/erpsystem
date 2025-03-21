@@ -1,0 +1,352 @@
+{% extends 'base.html' %}
+
+{% block title %}Return Details - {{ return_.name }}{% endblock %}
+
+{% block styles %}
+<style>
+    .status-badge {
+        font-size: 0.9rem;
+        padding: 0.5rem 0.75rem;
+    }
+    .timeline-item {
+        position: relative;
+        padding-left: 45px;
+        margin-bottom: 20px;
+    }
+    .timeline-item:before {
+        content: '';
+        position: absolute;
+        left: 15px;
+        top: 0;
+        height: 100%;
+        width: 2px;
+        background-color: #dee2e6;
+    }
+    .timeline-item:last-child:before {
+        height: 15px;
+    }
+    .timeline-icon {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background-color: #fff;
+        border: 2px solid #dee2e6;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1;
+    }
+    .timeline-content {
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        padding: 15px;
+    }
+    .progress-bar-pending {
+        background-color: #ffc107;
+    }
+    .progress-bar-resellable {
+        background-color: #28a745;
+    }
+    .progress-bar-defective {
+        background-color: #dc3545;
+    }
+    .progress-bar-scrapped {
+        background-color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Return #{{ return_.name }}</h1>
+            <p class="text-muted">Return Details</p>
+        </div>
+        <div class="col-auto">
+            {% if return_.state == 'validated' %}
+            <a href="{{ url_for('pos.return_quality_checks', return_id=return_.id) }}" class="btn btn-primary me-2">
+                <i class="fas fa-clipboard-check me-1"></i> View Quality Checks
+            </a>
+            <a href="{{ url_for('pos.sequential_quality_checks', return_id=return_.id) }}" class="btn btn-success me-2">
+                <i class="fas fa-tasks me-1"></i> Process Quality Checks
+            </a>
+            {% endif %}
+            <a href="{{ url_for('pos.returns') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back to Returns
+            </a>
+            
+            {% if return_.state == 'draft' %}
+            <div class="btn-group ms-2">
+                <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    Actions
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                        <form action="{{ url_for('pos.validate_return', return_id=return_.id) }}" method="POST" class="d-inline">
+                            <button type="submit" class="dropdown-item text-success">
+                                <i class="fas fa-check-circle me-2"></i> Validate Return
+                            </button>
+                        </form>
+                    </li>
+                    <li>
+                        <form action="{{ url_for('pos.cancel_return', return_id=return_.id) }}" method="POST" class="d-inline">
+                            <button type="submit" class="dropdown-item text-danger" onclick="return confirm('Are you sure you want to cancel this return?')">
+                                <i class="fas fa-times-circle me-2"></i> Cancel Return
+                            </button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Return Details -->
+            <div class="card mb-4">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Return Information</h5>
+                    <span class="status-badge badge {% if return_.state == 'draft' %}bg-warning{% elif return_.state == 'validated' %}bg-success{% else %}bg-danger{% endif %}">
+                        {{ return_.state|capitalize }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Customer:</strong> {{ return_.customer_name }}</p>
+                            <p><strong>Phone:</strong> {{ return_.customer_phone or 'N/A' }}</p>
+                            <p><strong>Return Date:</strong> {{ return_.return_date.strftime('%d/%m/%Y %H:%M') }}</p>
+                            <p><strong>Return Type:</strong> {{ return_.return_type|replace('_', ' ')|title }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Original Order:</strong> 
+                                {% if return_.original_order %}
+                                <a href="{{ url_for('pos.view_order', order_id=return_.original_order.id) }}">
+                                    {{ return_.original_order.name }}
+                                </a>
+                                {% else %}
+                                N/A
+                                {% endif %}
+                            </p>
+                            <p><strong>Refund Method:</strong> {{ return_.refund_method|replace('_', ' ')|title }}</p>
+                            <p><strong>Total Amount:</strong> GH₵{{ "%.2f"|format(return_.total_amount) }}</p>
+                            <p><strong>Refund Amount:</strong> GH₵{{ "%.2f"|format(return_.refund_amount) }}</p>
+                        </div>
+                    </div>
+                    
+                    {% if return_.notes %}
+                    <div class="mt-3">
+                        <h6>Notes:</h6>
+                        <p class="mb-0">{{ return_.notes }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Return Lines -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Returned Products</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Quantity</th>
+                                    <th>Unit Price</th>
+                                    <th>Subtotal</th>
+                                    <th>Reason</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for line in return_.return_lines %}
+                                <tr>
+                                    <td>
+                                        {% if line.product %}
+                                        {{ line.product.name }}
+                                        {% else %}
+                                        Unknown Product
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ line.quantity }}</td>
+                                    <td>GH₵{{ "%.2f"|format(line.unit_price) }}</td>
+                                    <td>GH₵{{ "%.2f"|format(line.subtotal) }}</td>
+                                    <td>
+                                        <span class="badge bg-secondary">
+                                            {{ line.reason|replace('_', ' ')|title }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if line.status == 'pending' %}bg-warning{% elif line.status == 'resellable' %}bg-success{% elif line.status == 'defective' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                            {{ line.status|capitalize }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if line.status == 'pending' and (return_.state == 'validated' or return_.state == 'completed') %}
+                                        <a href="{{ url_for('pos.new_quality_check', return_line_id=line.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-clipboard-check me-1"></i> Quality Check
+                                        </a>
+                                        {% elif line.quality_check %}
+                                        <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#qualityCheckModal{{ line.id }}">
+                                            <i class="fas fa-eye me-1"></i> View Check
+                                        </button>
+                                        
+                                        <!-- Quality Check Modal -->
+                                        <div class="modal fade" id="qualityCheckModal{{ line.id }}" tabindex="-1" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Quality Check Details</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="mb-3">
+                                                            <h6 class="border-bottom pb-2">Check Information</h6>
+                                                            <p><strong>Reference:</strong> {{ line.quality_check.name }}</p>
+                                                            <p><strong>Date:</strong> {{ line.quality_check.check_date.strftime('%d/%m/%Y %H:%M') }}</p>
+                                                            <p><strong>Status:</strong> 
+                                                                <span class="badge {% if line.quality_check.quality_state == 'pass' %}bg-success{% elif line.quality_check.quality_state == 'fail' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                                                    {{ line.quality_check.quality_state|replace('_', ' ')|title }}
+                                                                </span>
+                                                            </p>
+                                                            <p><strong>Disposition:</strong> {{ line.quality_check.disposition|replace('_', ' ')|title }}</p>
+                                                            <p><strong>Checked By:</strong> 
+                                                                {% if line.quality_check.checked_by_user %}
+                                                                {{ line.quality_check.checked_by_user.username }}
+                                                                {% else %}
+                                                                System
+                                                                {% endif %}
+                                                            </p>
+                                                        </div>
+                                                        
+                                                        <div class="mb-3">
+                                                            <h6 class="border-bottom pb-2">Notes</h6>
+                                                            <p class="mb-0">{{ line.quality_check.notes }}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Return Status -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Return Timeline</h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-icon bg-primary text-white">
+                                <i class="fas fa-file-alt"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">Return Created</h6>
+                                <p class="text-muted mb-0">{{ return_.created_at.strftime('%d/%m/%Y %H:%M') }}</p>
+                            </div>
+                        </div>
+                        
+                        {% if return_.state == 'validated' %}
+                        <div class="timeline-item">
+                            <div class="timeline-icon bg-success text-white">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">Return Validated</h6>
+                                <p class="text-muted mb-0">{{ return_.validation_date.strftime('%d/%m/%Y %H:%M') if return_.validation_date else 'N/A' }}</p>
+                            </div>
+                        </div>
+                        {% elif return_.state == 'cancelled' %}
+                        <div class="timeline-item">
+                            <div class="timeline-icon bg-danger text-white">
+                                <i class="fas fa-times"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">Return Cancelled</h6>
+                                <p class="text-muted mb-0">{{ return_.cancellation_date.strftime('%d/%m/%Y %H:%M') if return_.cancellation_date else 'N/A' }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quality Check Summary -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Quality Check Summary</h5>
+                </div>
+                <div class="card-body">
+                    {% set pending_count = return_.return_lines|selectattr('status', 'equalto', 'pending')|list|length %}
+                    {% set resellable_count = return_.return_lines|selectattr('status', 'equalto', 'resellable')|list|length %}
+                    {% set defective_count = return_.return_lines|selectattr('status', 'equalto', 'defective')|list|length %}
+                    {% set scrapped_count = return_.return_lines|selectattr('status', 'equalto', 'scrapped')|list|length %}
+                    
+                    <div class="mb-3">
+                        <h6>Status Breakdown</h6>
+                        <div class="progress">
+                            {% if pending_count > 0 %}
+                            {% set pending_width = (pending_count / return_.return_lines|length * 100)|int %}
+                            <div class="progress-bar progress-bar-pending w-{{ pending_width }}" role="progressbar">
+                                Pending ({{ pending_count }})
+                            </div>
+                            {% endif %}
+                            
+                            {% if resellable_count > 0 %}
+                            {% set resellable_width = (resellable_count / return_.return_lines|length * 100)|int %}
+                            <div class="progress-bar progress-bar-resellable w-{{ resellable_width }}" role="progressbar">
+                                Resellable ({{ resellable_count }})
+                            </div>
+                            {% endif %}
+                            
+                            {% if defective_count > 0 %}
+                            {% set defective_width = (defective_count / return_.return_lines|length * 100)|int %}
+                            <div class="progress-bar progress-bar-defective w-{{ defective_width }}" role="progressbar">
+                                Defective ({{ defective_count }})
+                            </div>
+                            {% endif %}
+                            
+                            {% if scrapped_count > 0 %}
+                            {% set scrapped_width = (scrapped_count / return_.return_lines|length * 100)|int %}
+                            <div class="progress-bar progress-bar-scrapped w-{{ scrapped_width }}" role="progressbar">
+                                Scrapped ({{ scrapped_count }})
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        {% if pending_count > 0 and return_.state == 'validated' %}
+                        <a href="{{ url_for('pos.quality_checks') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-clipboard-check me-2"></i> Process Pending Quality Checks
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

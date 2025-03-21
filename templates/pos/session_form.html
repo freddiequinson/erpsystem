@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h3>{{ title }}</h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            {{ form.cash_register_id.label(class="form-label") }}
+                            {% if form.cash_register_id.errors %}
+                                {{ form.cash_register_id(class="form-select is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.cash_register_id.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.cash_register_id(class="form-select") }}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.opening_balance.label(class="form-label") }}
+                            <div class="input-group">
+                                <span class="input-group-text">₵</span>
+                                {% if form.opening_balance.errors %}
+                                    {{ form.opening_balance(class="form-control is-invalid") }}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.opening_balance.errors %}
+                                            {{ error }}
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    {{ form.opening_balance(class="form-control") }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.notes.label(class="form-label") }}
+                            {% if form.notes.errors %}
+                                {{ form.notes(class="form-control is-invalid") }}
+                                <div class="invalid-feedback">
+                                    {% for error in form.notes.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {{ form.notes(class="form-control", rows=3) }}
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-cash-register me-2"></i> Open Session
+                            </button>
+                            <a href="{{ url_for('pos.index') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i> Back
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

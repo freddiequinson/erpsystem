@@ -1,0 +1,458 @@
+{% extends 'base.html' %}
+
+{% block title %}Staff Details - {{ staff.username }}{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pos_unified.css') }}">
+<style>
+    .staff-details {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        padding: 2rem 0;
+    }
+    
+    .details-header {
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .details-header h1 {
+        font-weight: 600;
+        color: #28a745;
+        margin-bottom: 0.5rem;
+    }
+    
+    .details-header p {
+        color: #6c757d;
+        font-size: 1.1rem;
+    }
+    
+    .staff-info-card {
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .staff-info-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .staff-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background-color: #28a745;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        margin-right: 1.5rem;
+    }
+    
+    .staff-details h3 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 0.3rem;
+        color: #343a40;
+    }
+    
+    .staff-details p {
+        color: #6c757d;
+        margin-bottom: 0.2rem;
+    }
+    
+    .stats-card {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .stats-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-bottom: 0.3rem;
+    }
+    
+    .stats-value {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: #343a40;
+    }
+    
+    .performance-section {
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .section-title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: 1.2rem;
+        color: #343a40;
+        padding-bottom: 0.8rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .performance-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .performance-table th, .performance-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .performance-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        text-align: left;
+    }
+    
+    .performance-table tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .btn-view {
+        padding: 0.3rem 0.6rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        background-color: #28a745;
+        color: white;
+        text-decoration: none;
+    }
+    
+    .btn-view:hover {
+        background-color: #218838;
+    }
+    
+    .nav-tabs {
+        border-bottom: 1px solid #dee2e6;
+        margin-bottom: 1.5rem;
+    }
+    
+    .nav-tabs .nav-link {
+        margin-bottom: -1px;
+        border: 1px solid transparent;
+        border-top-left-radius: 0.25rem;
+        border-top-right-radius: 0.25rem;
+        padding: 0.5rem 1rem;
+        color: #6c757d;
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: #28a745;
+        background-color: #fff;
+        border-color: #dee2e6 #dee2e6 #fff;
+        font-weight: 600;
+    }
+    
+    .tab-content > .tab-pane {
+        display: none;
+    }
+    
+    .tab-content > .active {
+        display: block;
+    }
+    
+    .chart-container {
+        height: 300px;
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container staff-details">
+    <div class="details-header">
+        <h1>Staff Details</h1>
+        <p>Performance overview for {{ staff.username }}</p>
+    </div>
+    
+    <!-- Staff Info Card -->
+    <div class="staff-info-card">
+        <div class="staff-info-header">
+            <div class="staff-avatar">
+                {{ staff.username[0].upper() }}
+            </div>
+            <div class="staff-details">
+                <h3>{{ staff.username }}</h3>
+                <p>
+                    <i class="fas fa-envelope me-2"></i> {{ staff.email }}
+                </p>
+                <p>
+                    <i class="fas fa-user-tag me-2"></i>
+                    {% for role in staff.roles %}
+                        <span class="badge bg-secondary me-1">{{ role.name }}</span>
+                    {% endfor %}
+                </p>
+                <p>
+                    <i class="fas fa-circle me-2" style="color: {% if staff.is_active %}#28a745{% else %}#dc3545{% endif %}"></i>
+                    {{ 'Active' if staff.is_active else 'Inactive' }}
+                </p>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-label">Total Sales (Today)</div>
+                    <div class="stats-value">₵{{ "%.2f"|format(today_sales) }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-label">Total Sales (This Week)</div>
+                    <div class="stats-value">₵{{ "%.2f"|format(week_sales) }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-label">Total Sales (This Month)</div>
+                    <div class="stats-value">₵{{ "%.2f"|format(month_sales) }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stats-label">Orders (Today)</div>
+                    <div class="stats-value">{{ today_orders }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Performance Charts -->
+    <div class="performance-section">
+        <h3 class="section-title">Performance Overview</h3>
+        
+        <ul class="nav nav-tabs" id="performanceTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="sales-tab" data-bs-toggle="tab" data-bs-target="#sales" type="button" role="tab" aria-controls="sales" aria-selected="true">Sales Performance</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="products-tab" data-bs-toggle="tab" data-bs-target="#products" type="button" role="tab" aria-controls="products" aria-selected="false">Top Products</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="sessions-tab" data-bs-toggle="tab" data-bs-target="#sessions" type="button" role="tab" aria-controls="sessions" aria-selected="false">Session History</button>
+            </li>
+        </ul>
+        
+        <div class="tab-content" id="performanceTabsContent">
+            <div class="tab-pane fade show active" id="sales" role="tabpanel" aria-labelledby="sales-tab">
+                <div class="chart-container">
+                    <canvas id="salesChart"></canvas>
+                </div>
+                
+                <table class="performance-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Orders</th>
+                            <th>Sales Amount</th>
+                            <th>Average Order Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for day in daily_performance %}
+                        <tr>
+                            <td>{{ day.date.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ day.orders }}</td>
+                            <td>₵{{ "%.2f"|format(day.sales) }}</td>
+                            <td>₵{{ "%.2f"|format(day.average) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="tab-pane fade" id="products" role="tabpanel" aria-labelledby="products-tab">
+                <div class="chart-container">
+                    <canvas id="productsChart"></canvas>
+                </div>
+                
+                <table class="performance-table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Quantity Sold</th>
+                            <th>Total Sales</th>
+                            <th>% of Sales</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in top_products %}
+                        <tr>
+                            <td>{{ product.name }}</td>
+                            <td>{{ product.quantity }}</td>
+                            <td>₵{{ "%.2f"|format(product.sales) }}</td>
+                            <td>{{ "%.1f"|format(product.percentage) }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="tab-pane fade" id="sessions" role="tabpanel" aria-labelledby="sessions-tab">
+                <table class="performance-table">
+                    <thead>
+                        <tr>
+                            <th>Session ID</th>
+                            <th>Start Time</th>
+                            <th>End Time</th>
+                            <th>Duration</th>
+                            <th>Orders</th>
+                            <th>Total Sales</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for session in sessions %}
+                        <tr>
+                            <td>{{ session.name }}</td>
+                            <td>{{ session.start_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ session.end_time.strftime('%Y-%m-%d %H:%M') if session.end_time else 'Active' }}</td>
+                            <td>
+                                {% if session.end_time %}
+                                    {{ ((session.end_time - session.start_time).total_seconds() / 3600)|round(1) }} hours
+                                {% else %}
+                                    {{ ((now - session.start_time).total_seconds() / 3600)|round(1) }} hours
+                                {% endif %}
+                            </td>
+                            <td>{{ session.order_count }}</td>
+                            <td>₵{{ "%.2f"|format(session.total_sales) }}</td>
+                            <td>
+                                {% if session.state == 'opened' %}
+                                <span class="badge bg-success">Active</span>
+                                {% elif session.state == 'closed' %}
+                                <span class="badge bg-secondary">Closed</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Orders -->
+    <div class="performance-section">
+        <h3 class="section-title">Recent Orders</h3>
+        
+        <table class="performance-table">
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Date</th>
+                    <th>Customer</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in recent_orders %}
+                <tr>
+                    <td>{{ order.name }}</td>
+                    <td>{{ order.order_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>{{ order.customer.name if order.customer else 'Walk-in Customer' }}</td>
+                    <td>₵{{ "%.2f"|format(order.total_amount) }}</td>
+                    <td>
+                        {% if order.state == 'paid' %}
+                        <span class="badge bg-success">Paid</span>
+                        {% elif order.state == 'draft' %}
+                        <span class="badge bg-warning">Draft</span>
+                        {% elif order.state == 'cancelled' %}
+                        <span class="badge bg-danger">Cancelled</span>
+                        {% elif order.state == 'refunded' %}
+                        <span class="badge bg-info">Refunded</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('pos.view_order', order_id=order.id) }}" class="btn-view">
+                            <i class="fas fa-eye"></i> View
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Sales Performance Chart
+        var salesCtx = document.getElementById('salesChart').getContext('2d');
+        var salesChart = new Chart(salesCtx, {
+            type: 'line',
+            data: {
+                labels: {{ sales_dates|tojson }},
+                datasets: [{
+                    label: 'Daily Sales (₵)',
+                    data: {{ sales_amounts|tojson }},
+                    backgroundColor: 'rgba(40, 167, 69, 0.2)',
+                    borderColor: 'rgba(40, 167, 69, 1)',
+                    borderWidth: 2,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '₵' + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Top Products Chart
+        var productsCtx = document.getElementById('productsChart').getContext('2d');
+        var productsChart = new Chart(productsCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ product_names|tojson }},
+                datasets: [{
+                    label: 'Sales Amount (₵)',
+                    data: {{ product_sales|tojson }},
+                    backgroundColor: 'rgba(40, 167, 69, 0.7)',
+                    borderColor: 'rgba(40, 167, 69, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '₵' + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

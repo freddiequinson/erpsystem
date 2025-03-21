@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+
+{% block title %}Receive Products - PO {{ order.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Receive Products</h1>
+            <p class="text-muted">Purchase Order: {{ order.name }} - {{ order.supplier.name }}</p>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('purchase.view_order', order_id=order.id) }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Order
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Product Receipt</h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {{ form.hidden_tag() }}
+                
+                <div class="mb-3 row">
+                    <label for="receipt_date" class="col-sm-2 col-form-label">Receipt Date</label>
+                    <div class="col-sm-4">
+                        {{ form.receipt_date(class="form-control") }}
+                    </div>
+                </div>
+                
+                <div class="table-responsive mb-4">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th class="text-center">Ordered</th>
+                                <th class="text-center">Already Received</th>
+                                <th class="text-center">Remaining</th>
+                                <th class="text-center">Receive Now</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for line in order.lines %}
+                            <tr>
+                                <td>
+                                    <div>{{ line.product.name }}</div>
+                                    <small class="text-muted">{{ line.product.sku }}</small>
+                                    <input type="hidden" name="line_ids[]" value="{{ line.id }}">
+                                    <input type="hidden" name="product_ids[]" value="{{ line.product_id }}">
+                                </td>
+                                <td class="text-center">{{ line.quantity }}</td>
+                                <td class="text-center">{{ line.received_quantity }}</td>
+                                <td class="text-center">{{ line.remaining_quantity }}</td>
+                                <td>
+                                    {% if line.remaining_quantity > 0 %}
+                                    <input type="number" name="receive_quantities[]" class="form-control text-center" 
+                                           min="0" max="{{ line.remaining_quantity }}" 
+                                           value="{{ line.remaining_quantity }}" 
+                                           step="0.01">
+                                    {% else %}
+                                    <input type="number" name="receive_quantities[]" class="form-control text-center" 
+                                           value="0" readonly>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="notes" class="form-label">Notes</label>
+                    {{ form.notes(class="form-control", rows=3) }}
+                </div>
+                
+                <div class="d-flex justify-content-end">
+                    <a href="{{ url_for('purchase.view_order', order_id=order.id) }}" class="btn btn-secondary me-2">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Confirm Receipt</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set today's date as default for receipt date
+        document.getElementById('receipt_date').valueAsDate = new Date();
+    });
+</script>
+{% endblock %}

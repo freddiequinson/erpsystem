@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Invoice - PO {{ order.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Create Invoice</h1>
+            <p class="text-muted">Purchase Order: {{ order.name }} - {{ order.supplier.name }}</p>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('purchase.view_order', order_id=order.id) }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Order
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Invoice Information</h5>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {{ form.hidden_tag() }}
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="invoice_date" class="form-label">Invoice Date</label>
+                        {{ form.invoice_date(class="form-control" + (" is-invalid" if form.invoice_date.errors else "")) }}
+                        {% if form.invoice_date.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.invoice_date.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="due_date" class="form-label">Due Date</label>
+                        {{ form.due_date(class="form-control" + (" is-invalid" if form.due_date.errors else "")) }}
+                        {% if form.due_date.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.due_date.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="reference" class="form-label">Supplier Reference</label>
+                        {{ form.reference(class="form-control" + (" is-invalid" if form.reference.errors else ""), placeholder="Supplier's invoice number") }}
+                        {% if form.reference.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.reference.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="table-responsive mb-4">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th style="width: 5%"></th>
+                                <th>Product</th>
+                                <th class="text-center">Ordered</th>
+                                <th class="text-center">Received</th>
+                                <th class="text-center">Invoiced</th>
+                                <th class="text-center">To Invoice</th>
+                                <th class="text-end">Unit Price</th>
+                                <th class="text-end">Tax (%)</th>
+                                <th class="text-end">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for line in order.lines %}
+                            <tr>
+                                <td>
+                                    <div class="form-check">
+                                        <input class="form-check-input line-checkbox" type="checkbox" name="line_ids[]" value="{{ line.id }}" id="line{{ line.id }}" checked>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>{{ line.product.name }}</div>
+                                    <small class="text-muted">{{ line.product.sku }}</small>
+                                    <input type="hidden" name="product_ids[]" value="{{ line.product_id }}">
+                                </td>
+                                <td class="text-center">{{ line.quantity }}</td>
+                                <td class="text-center">{{ line.received_quantity }}</td>
+                                <td class="text-center">{{ line.invoiced_quantity }}</td>
+                                <td>
+                                    {% set remaining = line.received_quantity - line.invoiced_quantity %}
+                                    {% if remaining > 0 %}
+                                    <input type="number" name="invoice_quantities[]" class="form-control text-center quantity-input" 
+                                           min="0" max="{{ remaining }}" 
+                                           value="{{ remaining }}" 
+                                           data-price="{{ line.unit_price }}"
+                                           data-tax="{{ line.tax_rate }}"
+                                           step="0.01">
+                                    {% else %}
+                                    <input type="number" name="invoice_quantities[]" class="form-control text-center quantity-input" 
+                                           value="0" readonly
+                                           data-price="{{ line.unit_price }}"
+                                           data-tax="{{ line.tax_rate }}">
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <input type="number" name="unit_prices[]" class="form-control text-end price-input" 
+                                           value="{{ line.unit_price }}" 
+                                           min="0" step="0.01">
+                                </td>
+                                <td class="text-end">
+                                    <input type="number" name="tax_rates[]" class="form-control text-end tax-input" 
+                                           value="{{ line.tax_rate }}" 
+                                           min="0" max="100" step="0.01">
+                                </td>
+                                <td class="text-end">
+                                    <span class="line-subtotal">₵0.00</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="8" class="text-end"><strong>Subtotal:</strong></td>
+                                <td class="text-end"><span id="subtotal">₵0.00</span></td>
+                            </tr>
+                            <tr>
+                                <td colspan="8" class="text-end"><strong>Tax:</strong></td>
+                                <td class="text-end"><span id="tax-total">₵0.00</span></td>
+                            </tr>
+                            <tr>
+                                <td colspan="8" class="text-end"><strong>Total:</strong></td>
+                                <td class="text-end"><strong id="grand-total">₵0.00</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="notes" class="form-label">Notes</label>
+                    {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""), rows=3) }}
+                    {% if form.notes.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.notes.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="d-flex justify-content-end">
+                    <a href="{{ url_for('purchase.view_order', order_id=order.id) }}" class="btn btn-secondary me-2">Cancel</a>
+                    <button type="submit" name="action" value="draft" class="btn btn-outline-primary me-2">Save as Draft</button>
+                    <button type="submit" name="action" value="validate" class="btn btn-primary">Validate</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set today's date as default for invoice date
+        document.getElementById('invoice_date').valueAsDate = new Date();
+        
+        // Set due date as today + 30 days by default
+        const dueDate = new Date();
+        dueDate.setDate(dueDate.getDate() + 30);
+        document.getElementById('due_date').valueAsDate = dueDate;
+        
+        // Calculate line subtotals and totals
+        function calculateSubtotals() {
+            const rows = document.querySelectorAll('tbody tr');
+            let subtotal = 0;
+            let taxTotal = 0;
+            
+            rows.forEach(row => {
+                const checkbox = row.querySelector('.line-checkbox');
+                if (checkbox && checkbox.checked) {
+                    const quantity = parseFloat(row.querySelector('.quantity-input').value) || 0;
+                    const price = parseFloat(row.querySelector('.price-input').value) || 0;
+                    const taxRate = parseFloat(row.querySelector('.tax-input').value) || 0;
+                    
+                    const lineSubtotal = quantity * price;
+                    const lineTax = lineSubtotal * (taxRate / 100);
+                    
+                    row.querySelector('.line-subtotal').textContent = '₵' + lineSubtotal.toFixed(2);
+                    
+                    subtotal += lineSubtotal;
+                    taxTotal += lineTax;
+                } else if (checkbox) {
+                    row.querySelector('.line-subtotal').textContent = '₵0.00';
+                }
+            });
+            
+            document.getElementById('subtotal').textContent = '₵' + subtotal.toFixed(2);
+            document.getElementById('tax-total').textContent = '₵' + taxTotal.toFixed(2);
+            document.getElementById('grand-total').textContent = '₵' + (subtotal + taxTotal).toFixed(2);
+        }
+        
+        // Add event listeners to all inputs that affect calculations
+        document.querySelectorAll('.line-checkbox, .quantity-input, .price-input, .tax-input').forEach(input => {
+            input.addEventListener('change', calculateSubtotals);
+            input.addEventListener('input', calculateSubtotals);
+        });
+        
+        // Initial calculation
+        calculateSubtotals();
+    });
+</script>
+{% endblock %}

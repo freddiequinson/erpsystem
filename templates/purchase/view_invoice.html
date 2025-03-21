@@ -1,0 +1,234 @@
+{% extends 'base.html' %}
+
+{% block title %}Invoice {{ invoice.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Invoice: {{ invoice.name }}</h1>
+            <p class="text-muted">Date: {{ invoice.invoice_date.strftime('%Y-%m-%d') }}</p>
+        </div>
+        <div class="col-auto">
+            <div class="btn-group">
+                <a href="{{ url_for('purchase.view_order', order_id=invoice.purchase_order_id) }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Order
+                </a>
+                {% if invoice.state == 'draft' %}
+                <a href="{{ url_for('purchase.validate_invoice', invoice_id=invoice.id) }}" class="btn btn-primary">
+                    <i class="fas fa-check"></i> Validate
+                </a>
+                {% elif invoice.state == 'validated' %}
+                <a href="{{ url_for('purchase.pay_invoice', invoice_id=invoice.id) }}" class="btn btn-success">
+                    <i class="fas fa-money-bill-wave"></i> Register Payment
+                </a>
+                {% endif %}
+                <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fas fa-ellipsis-v"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-print me-2"></i> Print</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-file-pdf me-2"></i> Export as PDF</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-envelope me-2"></i> Send by Email</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Invoice Details Card -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Invoice Details</h5>
+                    <span class="badge {% if invoice.state == 'draft' %}bg-secondary{% elif invoice.state == 'validated' %}bg-info{% elif invoice.state == 'paid' %}bg-success{% elif invoice.state == 'cancelled' %}bg-danger{% endif %} fs-6">
+                        {{ invoice.state|capitalize }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Supplier</h6>
+                            <p class="mb-1"><strong>{{ invoice.supplier.name }}</strong></p>
+                            <p class="mb-1">{{ invoice.supplier.contact_name }}</p>
+                            <p class="mb-1">{{ invoice.supplier.email }}</p>
+                            <p class="mb-1">{{ invoice.supplier.phone }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Purchase Order</h6>
+                            <p class="mb-1"><strong>{{ invoice.purchase_order.name }}</strong></p>
+                            <p class="mb-1">Order Date: {{ invoice.purchase_order.order_date.strftime('%Y-%m-%d') }}</p>
+                            <p class="mb-1">
+                                Status: 
+                                <span class="badge {% if invoice.purchase_order.state == 'draft' %}bg-secondary{% elif invoice.purchase_order.state == 'sent' %}bg-primary{% elif invoice.purchase_order.state == 'confirmed' %}bg-info{% elif invoice.purchase_order.state == 'received' %}bg-success{% elif invoice.purchase_order.state == 'cancelled' %}bg-danger{% endif %}">
+                                    {{ invoice.purchase_order.state|capitalize }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="text-center">Quantity</th>
+                                    <th class="text-end">Unit Price</th>
+                                    <th class="text-end">Tax</th>
+                                    <th class="text-end">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for line in invoice.lines %}
+                                <tr>
+                                    <td>
+                                        <div>{{ line.product.name }}</div>
+                                        <small class="text-muted">{{ line.product.sku }}</small>
+                                    </td>
+                                    <td class="text-center">{{ line.quantity }}</td>
+                                    <td class="text-end">₵{{ "%.2f"|format(line.unit_price) }}</td>
+                                    <td class="text-end">₵{{ "%.2f"|format(line.tax_amount) }}</td>
+                                    <td class="text-end">₵{{ "%.2f"|format(line.subtotal) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="4" class="text-end"><strong>Subtotal:</strong></td>
+                                    <td class="text-end">₵{{ "%.2f"|format(invoice.total_amount) }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="4" class="text-end"><strong>Tax:</strong></td>
+                                    <td class="text-end">₵{{ "%.2f"|format(invoice.tax_amount) }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="4" class="text-end"><strong>Total:</strong></td>
+                                    <td class="text-end"><strong>₵{{ "%.2f"|format(invoice.total_amount + invoice.tax_amount) }}</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    
+                    {% if invoice.notes %}
+                    <div class="mt-4">
+                        <h6 class="text-muted">Notes</h6>
+                        <p class="mb-0">{{ invoice.notes }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Payments Card (if any) -->
+            {% if invoice.payments.count() > 0 %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Payments</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Payment #</th>
+                                    <th>Date</th>
+                                    <th>Method</th>
+                                    <th>Reference</th>
+                                    <th class="text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for payment in invoice.payments %}
+                                <tr>
+                                    <td>{{ payment.name }}</td>
+                                    <td>{{ payment.payment_date.strftime('%Y-%m-%d') }}</td>
+                                    <td>{{ payment.payment_method }}</td>
+                                    <td>{{ payment.reference or 'N/A' }}</td>
+                                    <td class="text-end">₵{{ "%.2f"|format(payment.amount) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="4" class="text-end"><strong>Total Paid:</strong></td>
+                                    <td class="text-end">₵{{ "%.2f"|format(invoice.payments|sum(attribute='amount')) }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="4" class="text-end"><strong>Balance:</strong></td>
+                                    <td class="text-end">₵{{ "%.2f"|format((invoice.total_amount + invoice.tax_amount) - invoice.payments|sum(attribute='amount')) }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Invoice Info Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Invoice Information</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>Invoice Date</span>
+                            <span>{{ invoice.invoice_date.strftime('%Y-%m-%d') }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>Due Date</span>
+                            <span>{{ invoice.due_date.strftime('%Y-%m-%d') if invoice.due_date else 'Not specified' }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>Created By</span>
+                            <span>{{ invoice.user.username if invoice.user else 'System' }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>Created On</span>
+                            <span>{{ invoice.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Payment Status Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Payment Status</h5>
+                </div>
+                <div class="card-body">
+                    {% set total_amount = invoice.total_amount + invoice.tax_amount %}
+                    {% set paid_amount = invoice.payments|sum(attribute='amount') %}
+                    {% set payment_percent = (paid_amount / total_amount * 100)|round if total_amount > 0 else 0 %}
+                    
+                    <div class="progress mb-3" style="height: 20px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ payment_percent }}%;" aria-valuenow="{{ payment_percent }}" aria-valuemin="0" aria-valuemax="100">{{ payment_percent }}%</div>
+                    </div>
+                    
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>Total Amount</span>
+                            <span>₵{{ "%.2f"|format(total_amount) }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>Paid Amount</span>
+                            <span>₵{{ "%.2f"|format(paid_amount) }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>Balance</span>
+                            <span>₵{{ "%.2f"|format(total_amount - paid_amount) }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span>Payment Status</span>
+                            <span class="badge {% if payment_percent == 0 %}bg-danger{% elif payment_percent == 100 %}bg-success{% else %}bg-warning{% endif %}">
+                                {% if payment_percent == 0 %}Unpaid{% elif payment_percent == 100 %}Paid{% else %}Partial{% endif %}
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

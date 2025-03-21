@@ -1,0 +1,483 @@
+{% extends 'base.html' %}
+
+{% block title %}Sales Worker Monitoring{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pos_unified.css') }}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+    .monitoring-dashboard {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        padding: 2rem 0;
+    }
+    
+    .dashboard-header {
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .dashboard-header h1 {
+        font-weight: 600;
+        color: #28a745;
+        margin-bottom: 0.5rem;
+    }
+    
+    .dashboard-header p {
+        color: #6c757d;
+        font-size: 1.1rem;
+    }
+    
+    .filter-section {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    }
+    
+    .stats-card {
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        transition: transform 0.3s, box-shadow 0.3s;
+        height: 100%;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    }
+    
+    .stats-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stats-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #343a40;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stats-subtitle {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    
+    .content-card {
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .section-title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: 1.2rem;
+        color: #343a40;
+        padding-bottom: 0.8rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .data-table th, .data-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .data-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        color: #495057;
+        text-align: left;
+    }
+    
+    .data-table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .progress {
+        height: 8px;
+        margin-top: 0.5rem;
+    }
+    
+    .badge-success {
+        background-color: #28a745;
+    }
+    
+    .badge-warning {
+        background-color: #ffc107;
+    }
+    
+    .badge-danger {
+        background-color: #dc3545;
+    }
+    
+    .metric-card {
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        padding: 1.2rem;
+        margin-bottom: 1rem;
+        border-left: 4px solid #28a745;
+    }
+    
+    .metric-title {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-bottom: 0.3rem;
+    }
+    
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #343a40;
+    }
+    
+    .returns-card {
+        border-left-color: #dc3545;
+    }
+    
+    .net-sales-card {
+        border-left-color: #007bff;
+    }
+    
+    .chart-container {
+        position: relative;
+        height: 300px;
+        margin-bottom: 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container monitoring-dashboard">
+    <div class="dashboard-header">
+        <h1>Sales Worker Monitoring Dashboard</h1>
+        <p>Comprehensive view of sales worker performance including returns and net sales</p>
+    </div>
+    
+    <!-- Filter Section -->
+    <div class="filter-section">
+        <form method="get" action="{{ url_for('manager.sales_worker_dashboard') }}" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label for="date_range" class="form-label">Date Range</label>
+                <select name="date_range" id="date_range" class="form-select">
+                    <option value="today" {% if date_range == 'today' %}selected{% endif %}>Today</option>
+                    <option value="yesterday" {% if date_range == 'yesterday' %}selected{% endif %}>Yesterday</option>
+                    <option value="this_week" {% if date_range == 'this_week' %}selected{% endif %}>This Week</option>
+                    <option value="last_week" {% if date_range == 'last_week' %}selected{% endif %}>Last Week</option>
+                    <option value="this_month" {% if date_range == 'this_month' %}selected{% endif %}>This Month</option>
+                    <option value="last_month" {% if date_range == 'last_month' %}selected{% endif %}>Last Month</option>
+                    <option value="custom" {% if date_range == 'custom' %}selected{% endif %}>Custom Range</option>
+                </select>
+            </div>
+            
+            <div class="col-md-3 custom-date-range" {% if date_range != 'custom' %}style="display:none;"{% endif %}>
+                <label for="start_date" class="form-label">Start Date</label>
+                <input type="text" name="start_date" id="start_date" class="form-control date-picker" value="{{ start_date }}">
+            </div>
+            
+            <div class="col-md-3 custom-date-range" {% if date_range != 'custom' %}style="display:none;"{% endif %}>
+                <label for="end_date" class="form-label">End Date</label>
+                <input type="text" name="end_date" id="end_date" class="form-control date-picker" value="{{ end_date }}">
+            </div>
+            
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Overview Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-title">Total Sales Workers</div>
+                <div class="stats-value">{{ total_workers }}</div>
+                <div class="stats-subtitle">Active sales staff</div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-title">Total Gross Sales</div>
+                <div class="stats-value">₵{{ "%.2f"|format(total_gross_sales) }}</div>
+                <div class="stats-subtitle">Before returns</div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-title">Total Returns</div>
+                <div class="stats-value">₵{{ "%.2f"|format(total_returns) }}</div>
+                <div class="stats-subtitle">Refunded amount</div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-title">Total Net Sales</div>
+                <div class="stats-value">₵{{ "%.2f"|format(total_net_sales) }}</div>
+                <div class="stats-subtitle">After returns</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Performance Metrics -->
+    <div class="content-card">
+        <h3 class="section-title">Sales Worker Performance</h3>
+        
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Staff Name</th>
+                        <th>Gross Sales</th>
+                        <th>Returns</th>
+                        <th>Net Sales</th>
+                        <th>Orders</th>
+                        <th>Items Sold</th>
+                        <th>Return Rate</th>
+                        <th>Avg Order Value</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for staff in staff_performance %}
+                    <tr>
+                        <td>{{ staff.username }}</td>
+                        <td>₵{{ "%.2f"|format(staff.gross_sales) }}</td>
+                        <td>₵{{ "%.2f"|format(staff.returns_amount) }}</td>
+                        <td>₵{{ "%.2f"|format(staff.net_sales) }}</td>
+                        <td>{{ staff.order_count }}</td>
+                        <td>{{ staff.items_sold }}</td>
+                        <td>
+                            {% set return_rate = (staff.returns_amount / staff.gross_sales * 100) if staff.gross_sales > 0 else 0 %}
+                            {% if return_rate < 5 %}
+                                <span class="badge bg-success">{{ "%.1f"|format(return_rate) }}%</span>
+                            {% elif return_rate < 10 %}
+                                <span class="badge bg-warning">{{ "%.1f"|format(return_rate) }}%</span>
+                            {% else %}
+                                <span class="badge bg-danger">{{ "%.1f"|format(return_rate) }}%</span>
+                            {% endif %}
+                        </td>
+                        <td>₵{{ "%.2f"|format(staff.average_order) }}</td>
+                        <td>
+                            <a href="{{ url_for('manager.staff_details', user_id=staff.id) }}" class="btn btn-sm btn-outline-primary">Details</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Sales vs Returns Chart -->
+    <div class="content-card">
+        <h3 class="section-title">Sales vs Returns by Staff</h3>
+        
+        <div class="chart-container">
+            <canvas id="salesReturnsChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Top Performers -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="content-card">
+                <h3 class="section-title">Top Performers (Net Sales)</h3>
+                
+                {% for staff in top_net_sales_staff %}
+                <div class="metric-card">
+                    <div class="row">
+                        <div class="col-8">
+                            <div class="metric-title">{{ staff.username }}</div>
+                            <div class="metric-value">₵{{ "%.2f"|format(staff.net_sales) }}</div>
+                        </div>
+                        <div class="col-4 text-end">
+                            <div class="metric-title">Orders</div>
+                            <div class="metric-value">{{ staff.order_count }}</div>
+                        </div>
+                    </div>
+                    <div class="progress">
+                        {% set percentage = (staff.net_sales / top_net_sales_staff[0].net_sales * 100) if top_net_sales_staff[0].net_sales > 0 else 0 %}
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ percentage }}%" aria-valuenow="{{ percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="content-card">
+                <h3 class="section-title">Lowest Return Rates</h3>
+                
+                {% for staff in lowest_return_rate_staff %}
+                <div class="metric-card">
+                    <div class="row">
+                        <div class="col-8">
+                            <div class="metric-title">{{ staff.username }}</div>
+                            <div class="metric-value">{{ "%.1f"|format(staff.return_rate) }}%</div>
+                        </div>
+                        <div class="col-4 text-end">
+                            <div class="metric-title">Net Sales</div>
+                            <div class="metric-value">₵{{ "%.2f"|format(staff.net_sales) }}</div>
+                        </div>
+                    </div>
+                    <div class="progress">
+                        {% set inverse_percentage = 100 - staff.return_rate %}
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ inverse_percentage }}%" aria-valuenow="{{ inverse_percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Performance Targets -->
+    <div class="content-card">
+        <h3 class="section-title">Performance Targets</h3>
+        
+        <div class="row">
+            {% for staff in staff_targets %}
+            <div class="col-md-4 mb-4">
+                <div class="stats-card">
+                    <h4>{{ staff.username }}</h4>
+                    
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between">
+                            <span>Net Sales</span>
+                            <span>₵{{ "%.2f"|format(staff.net_sales) }} / ₵{{ "%.2f"|format(staff.sales_target) }}</span>
+                        </div>
+                        <div class="progress mt-2">
+                            {% set sales_percentage = (staff.net_sales / staff.sales_target * 100) if staff.sales_target > 0 else 0 %}
+                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ sales_percentage }}%" aria-valuenow="{{ sales_percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between">
+                            <span>Orders</span>
+                            <span>{{ staff.order_count }} / {{ staff.orders_target }}</span>
+                        </div>
+                        <div class="progress mt-2">
+                            {% set orders_percentage = (staff.order_count / staff.orders_target * 100) if staff.orders_target > 0 else 0 %}
+                            <div class="progress-bar bg-primary" role="progressbar" style="width: {{ orders_percentage }}%" aria-valuenow="{{ orders_percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between">
+                            <span>Return Rate</span>
+                            <span>{{ "%.1f"|format(staff.return_rate) }}% / {{ "%.1f"|format(staff.return_rate_target) }}%</span>
+                        </div>
+                        <div class="progress mt-2">
+                            {% set return_rate_percentage = 100 - (staff.return_rate / staff.return_rate_target * 100) if staff.return_rate_target > 0 else 0 %}
+                            <div class="progress-bar bg-danger" role="progressbar" style="width: {{ return_rate_percentage }}%" aria-valuenow="{{ return_rate_percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize date pickers
+        flatpickr('.date-picker', {
+            dateFormat: 'Y-m-d',
+            allowInput: true
+        });
+        
+        // Show/hide custom date range fields based on selection
+        document.getElementById('date_range').addEventListener('change', function() {
+            const customDateFields = document.querySelectorAll('.custom-date-range');
+            if (this.value === 'custom') {
+                customDateFields.forEach(field => field.style.display = 'block');
+            } else {
+                customDateFields.forEach(field => field.style.display = 'none');
+            }
+        });
+        
+        // Initialize Sales vs Returns Chart
+        const salesReturnsChart = new Chart(
+            document.getElementById('salesReturnsChart'),
+            {
+                type: 'bar',
+                data: {
+                    labels: {{ staff_names|tojson }},
+                    datasets: [
+                        {
+                            label: 'Gross Sales',
+                            data: {{ gross_sales_data|tojson }},
+                            backgroundColor: 'rgba(40, 167, 69, 0.7)',
+                            borderColor: 'rgba(40, 167, 69, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Returns',
+                            data: {{ returns_data|tojson }},
+                            backgroundColor: 'rgba(220, 53, 69, 0.7)',
+                            borderColor: 'rgba(220, 53, 69, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Net Sales',
+                            data: {{ net_sales_data|tojson }},
+                            backgroundColor: 'rgba(0, 123, 255, 0.7)',
+                            borderColor: 'rgba(0, 123, 255, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Amount (₵)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Sales Staff'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Sales vs Returns by Staff'
+                        }
+                    }
+                }
+            }
+        );
+    });
+</script>
+{% endblock %}

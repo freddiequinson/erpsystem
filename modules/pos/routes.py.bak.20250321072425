@@ -1,0 +1,51 @@
+# Filter cash registers by branch for non-admin users
+if is_admin:
+    # Admin sees all cash registers
+    try:
+        registers = POSCashRegister.query.all()
+        form.cash_register_id.choices = [(r.id, r.name) for r in registers]
+    except Exception as e:
+        print(f"Error getting cash registers: {e}")
+        form.cash_register_id.choices = []
+else:
+    # Branch managers and sales workers only see their branch's cash registers
+    try:
+        # Determine branch ID based on user role and attributes
+        branch_id = 1  # Default to Branch 1
+        
+        # Check if user has branch_id attribute
+        if hasattr(current_user, 'branch_id') and current_user.branch_id:
+            branch_id = current_user.branch_id
+        # If not, try to extract from username
+        elif current_user.username:
+            username = current_user.username.lower()
+            if 'branch' in username:
+                try:
+                    branch_id = int(username.replace('branch', '').strip())
+                except ValueError:
+                    pass
+            elif 'manager' in username:
+                try:
+                    branch_id = int(username.replace('manager', '').strip())
+                except ValueError:
+                    pass
+        
+        print(f"User: {current_user.username}, Branch ID: {branch_id}")
+        
+        # Get cash registers for this specific branch only
+        registers = POSCashRegister.query.filter_by(branch_id=branch_id).all()
+        
+        if registers:
+            # Set the choices for the dropdown
+            form.cash_register_id.choices = [(r.id, r.name) for r in registers]
+            
+            # ALWAYS pre-select the first register for non-admin users
+            # This is critical to ensure the cash register is selected
+            form.cash_register_id.data = registers[0].id
+            print(f"Pre-selected cash register ID: {registers[0].id} for branch {branch_id}")
+        else:
+            flash(f'No cash registers found for Branch {branch_id}. Please contact an administrator.', 'warning')
+            form.cash_register_id.choices = []
+    except Exception as e:
+        print(f"Error filtering cash registers: {e}")
+        form.cash_register_id.choices = []

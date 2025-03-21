@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ title }}</h1>
+            <p class="text-muted">Manage stock location details</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('inventory.warehouses') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Warehouses
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Location Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            {{ form.name.label(class="form-label") }}
+                            {{ form.name(class="form-control") }}
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.name.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.code.label(class="form-label") }}
+                            {{ form.code(class="form-control") }}
+                            {% if form.code.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.code.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">A unique code for this location (e.g. SHELF-A1, BIN-B2)</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.warehouse_id.label(class="form-label") }}
+                            {{ form.warehouse_id(class="form-select") }}
+                            {% if form.warehouse_id.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.warehouse_id.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.location_type.label(class="form-label") }}
+                            {{ form.location_type(class="form-select") }}
+                            {% if form.location_type.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.location_type.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">
+                                <ul class="mb-0 ps-3 mt-2">
+                                    <li><strong>Internal</strong>: Regular storage within your warehouse</li>
+                                    <li><strong>Customer</strong>: Customer locations (for tracking shipped goods)</li>
+                                    <li><strong>Supplier</strong>: Supplier locations (for tracking incoming goods)</li>
+                                    <li><strong>Production</strong>: Manufacturing areas</li>
+                                    <li><strong>Transit</strong>: Temporary locations for goods in transit</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.usage.label(class="form-label") }}
+                            {{ form.usage(class="form-control") }}
+                            {% if form.usage.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.usage.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Additional information about how this location is used</div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Location
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

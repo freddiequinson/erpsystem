@@ -1,0 +1,255 @@
+{% extends 'base.html' %}
+
+{% block title %}Session Report{% endblock %}
+
+{% block styles %}
+<style>
+    .report-container {
+        padding: 20px;
+    }
+    .card {
+        margin-bottom: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .card-header {
+        background-color: #6c5ce7;
+        color: white;
+        border-radius: 10px 10px 0 0 !important;
+        padding: 15px 20px;
+    }
+    .summary-card {
+        background-color: #f8f9fa;
+        border-left: 4px solid #6c5ce7;
+        margin-bottom: 20px;
+    }
+    .summary-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #2d3436;
+    }
+    .summary-label {
+        color: #636e72;
+        font-size: 0.9rem;
+    }
+    .table th {
+        background-color: #f8f9fa;
+    }
+    .badge-status {
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-weight: normal;
+    }
+    .badge-paid {
+        background-color: #00b894;
+        color: white;
+    }
+    .badge-draft {
+        background-color: #fdcb6e;
+        color: #2d3436;
+    }
+    .badge-cancelled {
+        background-color: #d63031;
+        color: white;
+    }
+    .payment-method-card {
+        border-left: 4px solid #00cec9;
+    }
+    .print-button {
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="report-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-file-alt me-2"></i> Session Report</h2>
+        <div>
+            <button onclick="window.print();" class="btn btn-outline-secondary print-button">
+                <i class="fas fa-print me-2"></i> Print Report
+            </button>
+            <a href="{{ url_for('pos.sessions') }}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left me-2"></i> Back to Sessions
+            </a>
+        </div>
+    </div>
+
+    <!-- Session Details -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Session Details</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Session ID:</strong> {{ session.id }}</p>
+                    <p><strong>User:</strong> {{ session.user.username }}</p>
+                    <p><strong>Branch:</strong> 
+                        {% if session.branch %}
+                        {{ session.branch.name }}
+                        {% else %}
+                        No Branch
+                        {% endif %}
+                    </p>
+                    <p><strong>Cash Register:</strong> 
+                        {% if session.cash_register %}
+                        {{ session.cash_register.name }}
+                        {% else %}
+                        No Cash Register
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Start Time:</strong> {{ session.start_time.strftime('%Y-%m-%d %H:%M') }}</p>
+                    <p><strong>End Time:</strong> 
+                        {% if session.end_time %}
+                        {{ session.end_time.strftime('%Y-%m-%d %H:%M') }}
+                        {% else %}
+                        Session still open
+                        {% endif %}
+                    </p>
+                    <p><strong>Status:</strong> 
+                        {% if session.state == 'open' %}
+                        <span class="badge badge-status badge-paid">Open</span>
+                        {% else %}
+                        <span class="badge badge-status badge-cancelled">Closed</span>
+                        {% endif %}
+                    </p>
+                    <p><strong>Notes:</strong> {{ session.notes or 'No notes' }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card summary-card">
+                <div class="card-body">
+                    <div class="summary-value">₵{{ "%.2f"|format(total_sales) }}</div>
+                    <div class="summary-label">Total Sales</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card summary-card">
+                <div class="card-body">
+                    <div class="summary-value">{{ total_orders }}</div>
+                    <div class="summary-label">Total Orders</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card summary-card">
+                <div class="card-body">
+                    <div class="summary-value">₵{{ "%.2f"|format(session.opening_balance) }}</div>
+                    <div class="summary-label">Opening Balance</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card summary-card">
+                <div class="card-body">
+                    <div class="summary-value">
+                        {% if session.closing_balance %}
+                        ₵{{ "%.2f"|format(session.closing_balance) }}
+                        {% else %}
+                        -
+                        {% endif %}
+                    </div>
+                    <div class="summary-label">Closing Balance</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Methods -->
+    <div class="card payment-method-card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Payment Methods</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for method_name, amount in payment_methods.items() %}
+                <div class="col-md-4 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title">{{ method_name }}</h6>
+                            <p class="card-text text-primary fw-bold">₵{{ "%.2f"|format(amount) }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="col-12">
+                    <p class="text-muted">No payment methods recorded for this session.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Orders List -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Orders</h5>
+        </div>
+        <div class="card-body">
+            {% if orders %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Date</th>
+                            <th>Customer</th>
+                            <th>Items</th>
+                            <th>Total</th>
+                            <th>Payment</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr>
+                            <td>{{ order.id }}</td>
+                            <td>{{ order.order_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>{{ order.customer_name or 'Walk-in Customer' }}</td>
+                            <td>{{ order.order_lines|length }}</td>
+                            <td>₵{{ "%.2f"|format(order.total_amount) }}</td>
+                            <td>
+                                {% if order.payment_method %}
+                                {{ order.payment_method.name }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if order.state == 'paid' %}
+                                <span class="badge badge-status badge-paid">Paid</span>
+                                {% elif order.state == 'draft' %}
+                                <span class="badge badge-status badge-draft">Draft</span>
+                                {% else %}
+                                <span class="badge badge-status badge-cancelled">Cancelled</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted">No orders recorded for this session.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add any JavaScript needed for the report here
+    });
+</script>
+{% endblock %}

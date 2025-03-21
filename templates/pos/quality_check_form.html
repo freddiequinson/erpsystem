@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+
+{% block title %}New Quality Check{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Quality Check</h1>
+            <p class="text-muted">Evaluate returned product quality and determine its disposition</p>
+        </div>
+        <div class="col-auto">
+            <a href="{{ url_for('pos.return_detail', return_id=return_line.return_id) }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i> Back to Return
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Quality Evaluation</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Product Information</h6>
+                            <p><strong>Product:</strong> {{ return_line.product.name if return_line.product else 'Unknown Product' }}</p>
+                            <p><strong>Quantity:</strong> {{ return_line.quantity }}</p>
+                            <p><strong>Return Reason:</strong> {{ return_line.reason|replace('_', ' ')|title }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Return Information</h6>
+                            <p><strong>Return Reference:</strong> {{ return_line.pos_return.name }}</p>
+                            <p><strong>Customer:</strong> {{ return_line.pos_return.customer_name }}</p>
+                            <p><strong>Return Date:</strong> {{ return_line.pos_return.return_date.strftime('%d/%m/%Y') }}</p>
+                        </div>
+                    </div>
+
+                    <form method="POST" action="{{ url_for('pos.new_quality_check', return_line_id=return_line.id) }}">
+                        <div class="mb-3">
+                            <label for="check_quantity" class="form-label"><strong>Quantity to Process:</strong></label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="check_quantity" name="check_quantity" 
+                                       min="1" max="{{ return_line.quantity }}" value="{{ return_line.quantity }}" step="1" required>
+                                <span class="input-group-text">of {{ return_line.quantity }} units</span>
+                            </div>
+                            <small class="form-text text-muted">Specify how many units you want to process with this quality check.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="quality_state" class="form-label">Quality Check Result</label>
+                            <select class="form-select" id="quality_state" name="quality_state" required>
+                                <option value="">Select a result</option>
+                                <option value="pass">Pass - Product is in good condition</option>
+                                <option value="minor_defect">Minor Defect - Can be repaired/refurbished</option>
+                                <option value="major_defect">Major Defect - Cannot be repaired</option>
+                                <option value="not_defective">Not Defective - Customer misuse or misunderstanding</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="disposition" class="form-label">Product Destination</label>
+                            <select class="form-select" id="disposition" name="disposition" required>
+                                <option value="">Select a destination</option>
+                                <option value="stock">Return to Stock</option>
+                                <option value="vendor">Return to Vendor</option>
+                                <option value="repair">Send for Repair</option>
+                                <option value="scrap">Scrap/Dispose</option>
+                                <option value="discount_sale">Discount Sale</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Additional details about the product condition, defects, or recommendations"></textarea>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Complete Quality Check</button>
+                            <a href="{{ url_for('pos.return_detail', return_id=return_line.return_id) }}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const qualityStateSelect = document.getElementById('quality_state');
+        const dispositionSelect = document.getElementById('disposition');
+        
+        // Update destination options based on result
+        qualityStateSelect.addEventListener('change', function() {
+            const result = this.value;
+            
+            // Clear current options except the first one
+            while (dispositionSelect.options.length > 1) {
+                dispositionSelect.remove(1);
+            }
+            
+            // Add appropriate options based on result
+            if (result === 'pass' || result === 'not_defective') {
+                addOption(dispositionSelect, 'stock', 'Return to Stock');
+                dispositionSelect.value = 'stock';
+            } else if (result === 'minor_defect') {
+                addOption(dispositionSelect, 'repair', 'Send for Repair');
+                addOption(dispositionSelect, 'vendor', 'Return to Vendor');
+                addOption(dispositionSelect, 'discount_sale', 'Discount Sale');
+                dispositionSelect.value = 'repair';
+            } else if (result === 'major_defect') {
+                addOption(dispositionSelect, 'vendor', 'Return to Vendor');
+                addOption(dispositionSelect, 'scrap', 'Scrap/Dispose');
+                dispositionSelect.value = 'scrap';
+            }
+        });
+        
+        // Helper function to add options
+        function addOption(select, value, text) {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = text;
+            select.appendChild(option);
+        }
+    });
+</script>
+{% endblock %}

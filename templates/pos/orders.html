@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if not current_user.has_role('Admin') and not current_user.has_role('Manager') %}My Orders{% else %}Orders{% endif %}{% endblock %}
+
+{% block styles %}
+<style>
+    .orders-container {
+        padding: 20px;
+    }
+    .card {
+        margin-bottom: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .card-header {
+        background-color: #6c5ce7;
+        color: white;
+        border-radius: 10px 10px 0 0 !important;
+        padding: 15px 20px;
+    }
+    .filter-section {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    .table th {
+        background-color: #f8f9fa;
+    }
+    .badge-status {
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-weight: normal;
+    }
+    .badge-paid {
+        background-color: #00b894;
+        color: white;
+    }
+    .badge-draft {
+        background-color: #fdcb6e;
+        color: #333;
+    }
+    .badge-cancelled {
+        background-color: #d63031;
+        color: white;
+    }
+    .order-actions .btn {
+        padding: 5px 10px;
+        margin-right: 5px;
+    }
+    .summary-card {
+        background-color: #f8f9fa;
+        border-left: 4px solid #6c5ce7;
+    }
+    .summary-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #2d3436;
+    }
+    .summary-label {
+        color: #636e72;
+        font-size: 0.9rem;
+    }
+    .date-selector {
+        display: flex;
+        align-items: center;
+    }
+    .date-selector .form-control {
+        max-width: 200px;
+        margin-right: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="orders-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        {% if not current_user.has_role('Admin') and not current_user.has_role('Manager') %}
+        <h2><i class="fas fa-receipt me-2"></i> My Orders</h2>
+        {% else %}
+        <h2><i class="fas fa-receipt me-2"></i> POS Orders</h2>
+        {% endif %}
+        <a href="{{ url_for('pos.index') }}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-2"></i> Back to POS
+        </a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card summary-card">
+                <div class="card-body">
+                    <div class="summary-value">₵{{ "%.2f"|format(total_sales) }}</div>
+                    {% if not current_user.has_role('Admin') and not current_user.has_role('Manager') %}
+                    <div class="summary-label">My Total Sales Today</div>
+                    {% else %}
+                    <div class="summary-label">Total Sales Today</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card summary-card">
+                <div class="card-body">
+                    <div class="summary-value">{{ order_count }}</div>
+                    {% if not current_user.has_role('Admin') and not current_user.has_role('Manager') %}
+                    <div class="summary-label">My Orders Today</div>
+                    {% else %}
+                    <div class="summary-label">Orders Today</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card summary-card">
+                <div class="card-body">
+                    <div class="summary-value">₵{{ "%.2f"|format(average_order) }}</div>
+                    <div class="summary-label">Average Order Value</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card summary-card">
+                <div class="card-body">
+                    <div class="summary-value">{{ items_sold }}</div>
+                    <div class="summary-label">Items Sold</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="card filter-section mb-4">
+        <form method="GET" action="{{ url_for('pos.orders') }}">
+            <div class="row align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Date</label>
+                    <div class="date-selector">
+                        <input type="date" class="form-control" name="date" value="{{ selected_date }}">
+                        <button type="submit" class="btn btn-primary">Filter</button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Payment Method</label>
+                    <select class="form-select" name="payment_method">
+                        <option value="">All Methods</option>
+                        <option value="cash" {% if payment_method == 'cash' %}selected{% endif %}>Cash</option>
+                        <option value="card" {% if payment_method == 'card' %}selected{% endif %}>Card</option>
+                        <option value="mobile" {% if payment_method == 'mobile' %}selected{% endif %}>Mobile Money</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" name="status">
+                        <option value="">All Statuses</option>
+                        <option value="paid" {% if status == 'paid' %}selected{% endif %}>Paid</option>
+                        <option value="draft" {% if status == 'draft' %}selected{% endif %}>Draft</option>
+                        <option value="cancelled" {% if status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-3 text-end">
+                    <a href="{{ url_for('pos.orders') }}" class="btn btn-outline-secondary">Reset Filters</a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Orders Table -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Order List</h5>
+        </div>
+        <div class="card-body">
+            {% if orders %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Time</th>
+                            <th>Customer</th>
+                            <th>Items</th>
+                            <th>Total</th>
+                            <th>Payment</th>
+                            <th>Cashier</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr class="order-row" style="cursor: pointer;" onclick="window.location.href='{{ url_for('pos.view_order', order_id=order.id) }}'">
+                            <td>{{ order.name }}</td>
+                            <td>{{ order.order_date.strftime('%H:%M:%S') }}</td>
+                            <td>
+                                {% if order.customer %}
+                                {{ order.customer.name }}
+                                {% else %}
+                                Walk-in Customer
+                                {% endif %}
+                            </td>
+                            <td>{{ order.lines.count() }}</td>
+                            <td>₵{{ "%.2f"|format(order.total_amount) }}</td>
+                            <td>
+                                <span class="text-capitalize">{{ order.payment_method }}</span>
+                                {% if order.payment_reference %}
+                                <small class="d-block text-muted">Ref: {{ order.payment_reference }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if order.user %}
+                                {{ order.user.username }}
+                                {% else %}
+                                Unknown
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if order.state == 'paid' %}
+                                <span class="badge badge-status badge-paid">Paid</span>
+                                {% elif order.state == 'draft' %}
+                                <span class="badge badge-status badge-draft">Draft</span>
+                                {% elif order.state == 'cancelled' %}
+                                <span class="badge badge-status badge-cancelled">Cancelled</span>
+                                {% endif %}
+                            </td>
+                            <td class="order-actions" onclick="event.stopPropagation();">
+                                <a href="{{ url_for('pos.view_receipt', order_id=order.id) }}" target="_blank" class="btn btn-sm btn-outline-primary" title="View Receipt">
+                                    <i class="fas fa-receipt"></i>
+                                </a>
+                                <a href="{{ url_for('pos.print_receipt', order_id=order.id) }}" target="_blank" class="btn btn-sm btn-outline-secondary" title="Print Receipt">
+                                    <i class="fas fa-print"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
+                <h5>No orders found for the selected filters</h5>
+                <p class="text-muted">Try changing your filter criteria or create new orders</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
