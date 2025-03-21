@@ -11,7 +11,11 @@ from modules.purchase.models import Supplier, PurchaseOrder, PurchaseOrderLine, 
 from modules.employees.models import Department, JobPosition, Employee, LeaveType, LeaveAllocation, Attendance
 
 def init_db():
-    app = create_app('development')
+    # Use production config if on Render, otherwise use development
+    config = os.getenv('FLASK_CONFIG') or ('production' if os.getenv('RENDER') == 'true' else 'development')
+    print(f"Initializing database with {config} configuration")
+    
+    app = create_app(config)
     with app.app_context():
         # Create all tables
         db.create_all()
@@ -20,6 +24,8 @@ def init_db():
         if User.query.first() is not None:
             print("Database already initialized!")
             return
+        
+        print("Creating initial data...")
         
         # Create roles
         admin_role = Role(name='Admin', description='Administrator with full access')
