@@ -262,22 +262,83 @@ def user_activity(user_id):
     # Get user's orders
     orders = POSOrder.query.filter_by(created_by=user_id).order_by(POSOrder.order_date.desc()).all()
     
-    # Get user's returns
-    returns = POSReturn.query.filter_by(created_by=user_id).order_by(POSReturn.return_date.desc()).all()
+    # Get user's sessions
+    sessions = POSSession.query.filter_by(user_id=user_id).order_by(POSSession.start_time.desc()).all()
     
-    # Get user's active sessions
-    active_sessions = POSSession.query.filter_by(user_id=user_id, state='open').all()
-    
-    # Calculate statistics
-    total_sales = sum(order.total_amount for order in orders)
-    total_orders = len(orders)
-    total_returns = len(returns)
-    
-    return render_template('admin/user_activity.html',
+    return render_template('admin/user_activity.html', 
                           user=user,
                           orders=orders,
-                          returns=returns,
-                          active_sessions=active_sessions,
-                          total_sales=total_sales,
-                          total_orders=total_orders,
-                          total_returns=total_returns)
+                          sessions=sessions)
+
+@admin.route('/system-reset', methods=['GET', 'POST'])
+@login_required
+def system_reset():
+    """Special page for hard resetting the entire system database"""
+    # Check if user has admin role
+    if not current_user.has_role('Admin'):
+        flash('You do not have permission to access system reset.', 'danger')
+        return redirect(url_for('admin.dashboard'))
+    
+    # Track if reset was successful
+    reset_success = False
+    
+    if request.method == 'POST' and 'confirm_reset' in request.form:
+        try:
+            # Delete all data from all tables in a specific order to avoid foreign key constraints
+            
+            # Get all table names from the database using reflection
+            from sqlalchemy import inspect, text
+            inspector = inspect(db.engine)
+            tables = inspector.get_table_names()
+            
+            # Disable foreign key checks temporarily
+            db.session.execute(text("PRAGMA foreign_keys = OFF"))
+            
+            # First delete all data from specific tables that might have foreign key relationships
+            # POS related tables
+            if 'pos_order_lines' in tables:
+                db.session.execute(text("DELETE FROM pos_order_lines"))
+            if 'pos_order_payments' in tables:
+                db.session.execute(text("DELETE FROM pos_order_payments"))
+            if 'pos_returns' in tables:
+                db.session.execute(text("DELETE FROM pos_returns"))
+            if 'pos_orders' in tables:
+                db.session.execute(text("DELETE FROM pos_orders"))
+            if 'pos_sessions' in tables:
+                db.session.execute(text("DELETE FROM pos_sessions"))
+            if 'pos_payment_methods' in tables:
+                db.session.execute(text("DELETE FROM pos_payment_methods"))
+            
+            # Inventory related tables
+            if 'stock_moves' in tables:
+                db.session.execute(text("DELETE FROM stock_moves"))
+            if 'inventory_lines' in tables:
+                db.session.execute(text("DELETE FROM inventory_lines"))
+            if 'inventories' in tables:
+                db.session.execute(text("DELETE FROM inventories"))
+            if 'products' in tables:
+                db.session.execute(text("DELETE FROM products"))
+            
+            # Sales related tables
+            if 'sales_orders' in tables:
+                db.session.execute(text("DELETE FROM sales_orders"))
+            if 'sales_order_lines' in tables:
+                db.session.execute(text("DELETE FROM sales_order_lines"))
+            if 'invoices' in tables:
+                db.session.execute(text("DELETE FROM invoices"))
+            if 'invoice_lines' in tables:
+                db.session.execute(text("DELETE FROM invoice_lines"))
+            
+            # Re-enable foreign key checks
+            db.session.execute(text("PRAGMA foreign_keys = ON"))
+            
+            # Commit the changes
+            db.session.commit()
+            
+            flash('System has been completely reset. All data has been cleared.', 'success')
+            reset_success = True
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error during system reset: {str(e)}', 'danger')
+    
+    return render_template('admin/system_reset.html', reset_success=reset_success)

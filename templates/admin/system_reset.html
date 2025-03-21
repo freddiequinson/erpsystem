@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+
+{% block title %}System Reset{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <h1>System Reset</h1>
+            <p class="text-muted">WARNING: This page allows complete reset of the system database</p>
+        </div>
+        <div class="col-md-6 text-end">
+            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                DANGER ZONE - Hard System Reset
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <h4 class="alert-heading">WARNING: Irreversible Action!</h4>
+                <p>This action will completely reset the system by deleting ALL data including:</p>
+                <ul>
+                    <li>All POS orders and transactions</li>
+                    <li>All POS sessions</li>
+                    <li>All product data</li>
+                    <li>All inventory movements</li>
+                </ul>
+                <p class="mb-0">This action is <strong>irreversible</strong> and intended only for development or deployment preparation purposes.</p>
+            </div>
+
+            {% if reset_success %}
+            <div class="alert alert-success">
+                <h4 class="alert-heading">Reset Successful!</h4>
+                <p>The system has been completely reset. All data has been cleared from the database.</p>
+                <p>You can now start using the system with a fresh database.</p>
+            </div>
+            {% else %}
+            <form method="POST" action="{{ url_for('admin.system_reset') }}" id="resetForm">
+                <div class="form-group mb-3">
+                    <label for="confirmText" class="form-label">Type "RESET" to confirm:</label>
+                    <input type="text" class="form-control" id="confirmText" required>
+                </div>
+                <div class="d-grid gap-2">
+                    <button type="submit" name="confirm_reset" value="1" class="btn btn-danger" id="resetButton" disabled>
+                        <i class="fas fa-bomb me-2"></i>
+                        Hard Reset System
+                    </button>
+                </div>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const confirmText = document.getElementById('confirmText');
+        const resetButton = document.getElementById('resetButton');
+        const resetForm = document.getElementById('resetForm');
+
+        if (confirmText && resetButton) {
+            confirmText.addEventListener('input', function() {
+                resetButton.disabled = this.value !== 'RESET';
+            });
+
+            resetForm.addEventListener('submit', function(e) {
+                if (confirmText.value !== 'RESET') {
+                    e.preventDefault();
+                    alert('Please type RESET to confirm this action.');
+                    return false;
+                }
+                
+                if (!confirm('WARNING: This will permanently delete ALL data in the system. Are you absolutely sure?')) {
+                    e.preventDefault();
+                    return false;
+                }
+                
+                return true;
+            });
+        }
+    });
+</script>
+{% endblock %}
