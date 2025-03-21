@@ -43,8 +43,18 @@ class TestingConfig(Config):
 class ProductionConfig(Config):
     # Production specific settings
     DEBUG = False
-    # Use PostgreSQL in production
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'postgresql://username:password@localhost/erp_system'
+    # Use PostgreSQL in production with Railway's environment variables
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    
+    @staticmethod
+    def init_app(app):
+        Config.init_app(app)
+        # Log to stderr
+        import logging
+        from logging import StreamHandler
+        file_handler = StreamHandler()
+        file_handler.setLevel(logging.INFO)
+        app.logger.addHandler(file_handler)
 
 
 config = {
