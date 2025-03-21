@@ -1,0 +1,8 @@
+[phases.setup]
+aptPkgs = ["python3-distutils", "python3-dev", "build-essential", "libpq-dev"]
+
+[phases.install]
+cmds = ["pip install --upgrade pip setuptools wheel", "pip install -r requirements-railway.txt"]
+
+[start]
+cmd = "python -m flask db upgrade && python init_db.py && gunicorn 'app:create_app(\"production\")' --bind 0.0.0.0:$PORT"
