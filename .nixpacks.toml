@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["python39", "gcc", "python39Packages.setuptools", "python39Packages.pip", "python39Packages.wheel"]
+
+[phases.install]
+cmds = ["python -m pip install --upgrade pip setuptools wheel", "pip install -r requirements.txt"]
+
+[start]
+cmd = "gunicorn 'app:create_app(\"production\")' --bind 0.0.0.0:$PORT"
