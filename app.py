@@ -4,12 +4,36 @@ from flask_login import current_user, login_required
 from config import config
 from datetime import datetime
 from extensions import db, migrate, jwt, login_manager
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def create_app(config_name='default'):
     # Create and configure the app
     app = Flask(__name__)
+    
+    # Log the configuration being used
+    logger.info(f"Creating app with configuration: {config_name}")
+    
+    # Handle Render's PostgreSQL URL format
+    if config_name == 'production' and os.environ.get('DATABASE_URL'):
+        db_url = os.environ.get('DATABASE_URL')
+        if db_url.startswith('postgres://'):
+            db_url = db_url.replace('postgres://', 'postgresql://', 1)
+            os.environ['DATABASE_URL'] = db_url
+            logger.info("Converted DATABASE_URL from postgres:// to postgresql://")
+    
+    # Load configuration
     app.config.from_object(config[config_name])
     config[config_name].init_app(app)
+    
+    # Log database URL (without sensitive info)
+    db_url = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+    if db_url:
+        masked_url = db_url.split('@')[-1] if '@' in db_url else db_url
+        logger.info(f"Using database: {masked_url}")
     
     # Initialize extensions with app
     db.init_app(app)
