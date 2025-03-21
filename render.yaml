@@ -1,0 +1,28 @@
+services:
+  # A web service
+  - type: web
+    name: erpsystem
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_CONFIG
+        value: production
+      - key: RENDER
+        value: "true"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: erpsystem-db
+          property: connectionString
+
+  # A PostgreSQL database
+  - type: postgres
+    name: erpsystem-db
+    ipAllowList: []
+    plan: free
