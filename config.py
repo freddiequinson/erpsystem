@@ -1,5 +1,9 @@
 import os
 from datetime import timedelta
+from dotenv import load_dotenv
+
+# Load environment variables from .env file if it exists
+load_dotenv()
 
 class Config:
     # Security
@@ -8,8 +12,8 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
     
     # Database
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///erp_system.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_RECORD_QUERIES = True
     
     # Application settings
     APP_NAME = "Enterprise ERP"
@@ -33,32 +37,38 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
+        'sqlite:///dev.db'
 
 
 class TestingConfig(Config):
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///test_erp_system.db'
+    SQLALCHEMY_DATABASE_URI = os.environ.get('TEST_DATABASE_URL') or \
+        'sqlite:///test.db'
 
 
 class ProductionConfig(Config):
-    # Production specific settings
     DEBUG = False
+    
+    # Get database URL from environment variable
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
     
     @staticmethod
     def init_app(app):
         Config.init_app(app)
         
-        # Fix for Render PostgreSQL URL format
+        # Handle PostgreSQL URL format if needed
         db_url = app.config.get('SQLALCHEMY_DATABASE_URI')
         if db_url and db_url.startswith('postgres://'):
             app.config['SQLALCHEMY_DATABASE_URI'] = db_url.replace('postgres://', 'postgresql://', 1)
         
-        # Log configuration info
-        import logging
-        from logging import StreamHandler
-        file_handler = StreamHandler()
-        file_handler.setLevel(logging.INFO)
-        app.logger.addHandler(file_handler)
+        # PythonAnywhere specific configuration
+        if os.environ.get('PYTHONANYWHERE') == 'true':
+            import logging
+            from logging import StreamHandler
+            file_handler = StreamHandler()
+            file_handler.setLevel(logging.INFO)
+            app.logger.addHandler(file_handler)
 
 
 config = {

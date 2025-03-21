@@ -12,12 +12,20 @@ from modules.purchase.models import Supplier, PurchaseOrder, PurchaseOrderLine, 
 from modules.employees.models import Department, JobPosition, Employee, LeaveType, LeaveAllocation, Attendance
 
 # Configure logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def init_db():
-    # Use production config if on Render, otherwise use development
-    config = os.getenv('FLASK_CONFIG') or ('production' if os.getenv('RENDER') == 'true' else 'development')
-    logger.info(f"Initializing database with {config} configuration")
+    # Determine the configuration to use
+    if os.environ.get('PYTHONANYWHERE') == 'true':
+        config = 'production'
+        logger.info("Initializing database for PythonAnywhere deployment")
+    elif os.environ.get('RENDER') == 'true':
+        config = 'production'
+        logger.info("Initializing database for Render deployment")
+    else:
+        config = os.getenv('FLASK_CONFIG', 'development')
+        logger.info(f"Initializing database with {config} configuration")
     
     # Check if we're already in an app context
     try:
@@ -44,6 +52,9 @@ def init_db():
         if user_exists:
             logger.info("Database already initialized!")
             return
+        
+        logger.info("Creating database tables...")
+        db.create_all()
         
         logger.info("Creating initial data...")
         
