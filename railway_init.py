@@ -18,6 +18,25 @@ except ImportError as e:
     print(f"Warning: Pandas import issue: {e}")
     print("Continuing without pandas as it may not be needed for core functionality...")
 
+# Print environment variables for debugging (without sensitive info)
+print("Environment variables:")
+for key in os.environ:
+    if "DATABASE_URL" in key:
+        print(f"  {key}: [Connection string found but not displayed for security]")
+    elif "SECRET" in key.upper():
+        print(f"  {key}: [Secret value not displayed for security]")
+    else:
+        print(f"  {key}: {os.environ[key]}")
+
+# Ensure DATABASE_URL is set correctly for PostgreSQL
+database_url = os.environ.get('DATABASE_URL')
+if database_url and database_url.startswith('postgres://'):
+    # Replace postgres:// with postgresql:// for SQLAlchemy 1.4+
+    print("Converting postgres:// to postgresql:// in DATABASE_URL")
+    os.environ['DATABASE_URL'] = database_url.replace('postgres://', 'postgresql://', 1)
+elif not database_url:
+    print("WARNING: DATABASE_URL is not set!")
+
 from app import create_app, db
 from modules.auth.models import User, Role, UserRole
 from modules.inventory.models import Category, Product, StockLocation, StockMove
@@ -31,7 +50,11 @@ def init_db():
     app = create_app('production')
     
     with app.app_context():
+        # Print database connection info
+        print(f"Database URL type: {app.config.get('SQLALCHEMY_DATABASE_URI', '').split('://')[0] if '://' in app.config.get('SQLALCHEMY_DATABASE_URI', '') else 'unknown'}")
+        
         # Create all tables
+        print("Creating database tables...")
         db.create_all()
         
         # Check if admin user exists
