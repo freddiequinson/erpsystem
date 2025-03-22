@@ -43,3 +43,33 @@ media/
 
 # Fix scripts that shouldn't be in production
 fix_*.py
+
+# Debug and temporary scripts
+check_*.py
+debug_*.py
+inspect_*.py
+recreate_*.py
+rebuild_*.py
+add_*.py
+direct_db_*.py
+force_*.py
+reset_*.py
+update_*.py
+verify_*.py
+sync_*.py
+test_*.py
+setup_*.py
+initialize_*.py
+complete_*.py
+
+# Deployment files (keep only what you need)
+*_DEPLOYMENT.md
+pythonanywhere_*.md
+
+# Temporary utility scripts
+identify_core_files.py
+
+# Database migration scripts
+migrations/add_*.py
+migrations/check_*.py
+migrations/create_*.py
