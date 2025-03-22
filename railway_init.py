@@ -4,6 +4,20 @@ This script will create all necessary tables and the admin user.
 """
 import os
 import sys
+
+# Handle pandas import issues
+try:
+    # Try to disable pandas warnings that might be causing issues
+    import warnings
+    warnings.filterwarnings('ignore', category=UserWarning, module='pandas')
+    
+    # Try specific pandas import to ensure it works
+    import pandas
+    print(f"Successfully imported pandas version: {pandas.__version__}")
+except ImportError as e:
+    print(f"Warning: Pandas import issue: {e}")
+    print("Continuing without pandas as it may not be needed for core functionality...")
+
 from app import create_app, db
 from modules.auth.models import User, Role, UserRole
 from modules.inventory.models import Category, Product, StockLocation, StockMove
