@@ -878,6 +878,7 @@ def process_product_import(df):
                                 name=f"{warehouse.name} Stock",
                                 code=f"STOCK-{warehouse.code}",
                                 warehouse_id=warehouse.id,
+                                location_type='internal',
                                 is_active=True
                             )
                         except TypeError:
@@ -885,7 +886,8 @@ def process_product_import(df):
                             stock_location = StockLocation(
                                 name=f"{warehouse.name} Stock",
                                 code=f"STOCK-{warehouse.code}",
-                                warehouse_id=warehouse.id
+                                warehouse_id=warehouse.id,
+                                location_type='internal'
                             )
                         
                         db.session.add(stock_location)

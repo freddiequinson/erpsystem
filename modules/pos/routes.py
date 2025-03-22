@@ -260,6 +260,20 @@ def new_session():
     form = POSSessionForm()
     form.cash_register_id.choices = [(r.id, r.name) for r in POSCashRegister.query.all()]
     
+    # Get available cash registers
+    cash_registers = POSCashRegister.query.all()
+    form.cash_register_id.choices = [(r.id, r.name) for r in cash_registers]
+    
+    # Preset the cash register if there's only one or if the user has a previous session
+    if cash_registers:
+        # Try to find the last used cash register for this user
+        last_session = POSSession.query.filter_by(user_id=current_user.id).order_by(POSSession.id.desc()).first()
+        if last_session and last_session.cash_register_id:
+            form.cash_register_id.data = last_session.cash_register_id
+        else:
+            # Default to the first cash register if no previous session
+            form.cash_register_id.data = cash_registers[0].id
+    
     if form.validate_on_submit():
         # Generate session name (e.g., POS/2023/001)
         last_session = POSSession.query.order_by(POSSession.id.desc()).first()

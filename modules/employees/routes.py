@@ -204,18 +204,8 @@ def new_department():
     # Populate dropdown fields
     form.parent_id.choices = [(0, 'None')] + [(d.id, d.name) for d in Department.query.all()]
     
-    # Filter managers based on branch for non-admin users
-    is_admin = current_user.has_role('admin')
-    if is_admin:
-        form.manager_id.choices = [(0, 'None')] + [(e.id, e.full_name) for e in Employee.query.all()]
-    else:
-        # Get managers from the same branch
-        managers = Employee.query.join(
-            User, Employee.user_id == User.id
-        ).filter(
-            User.branch_id == current_user.branch_id
-        ).all()
-        form.manager_id.choices = [(0, 'None')] + [(e.id, e.full_name) for e in managers]
+    # Get all employees for manager selection
+    form.manager_id.choices = [(0, 'None')] + [(e.id, e.full_name) for e in Employee.query.all()]
     
     if form.validate_on_submit():
         # Handle 0 values (None) for foreign keys
@@ -243,9 +233,11 @@ def edit_department(department_id):
     form = DepartmentForm(obj=department)
     
     # Populate dropdown fields
-    form.parent_id.choices = [(0, 'None')] + [(d.id, d.name) for d in Department.query.filter(Department.id != department_id).all()]
+    # Exclude current department from parent options to avoid circular reference
+    parent_choices = [(d.id, d.name) for d in Department.query.filter(Department.id != department_id).all()]
+    form.parent_id.choices = [(0, 'None')] + parent_choices
     
-    # Show all employees as potential managers
+    # Get all employees for manager selection
     form.manager_id.choices = [(0, 'None')] + [(e.id, e.full_name) for e in Employee.query.all()]
     
     if form.validate_on_submit():
@@ -285,18 +277,8 @@ def new_job_position():
     # Populate dropdown fields
     form.department_id.choices = [(0, 'None')] + [(d.id, d.name) for d in Department.query.all()]
     
-    # Filter managers based on branch for non-admin users
-    is_admin = current_user.has_role('admin')
-    if is_admin:
-        form.manager_id.choices = [(0, 'None')] + [(e.id, e.full_name) for e in Employee.query.all()]
-    else:
-        # Get managers from the same branch
-        managers = Employee.query.join(
-            User, Employee.user_id == User.id
-        ).filter(
-            User.branch_id == current_user.branch_id
-        ).all()
-        form.manager_id.choices = [(0, 'None')] + [(e.id, e.full_name) for e in managers]
+    # Get all employees for manager selection
+    form.manager_id.choices = [(0, 'None')] + [(e.id, e.full_name) for e in Employee.query.all()]
     
     if form.validate_on_submit():
         # Handle 0 values (None) for foreign keys

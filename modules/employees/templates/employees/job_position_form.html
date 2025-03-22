@@ -56,6 +56,18 @@
                 </div>
 
                 <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="form-group">
+                            {{ form.manager_id.label(class="form-label") }}
+                            {{ form.manager_id(class="form-control" + (" is-invalid" if form.manager_id.errors else "")) }}
+                            {% for error in form.manager_id.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
                     <div class="col-md-12 mb-3">
                         <div class="form-group">
                             {{ form.description.label(class="form-label") }}

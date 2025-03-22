@@ -17,6 +17,7 @@ class DepartmentForm(FlaskForm):
 class JobPositionForm(FlaskForm):
     name = StringField('Position Name', validators=[DataRequired(), Length(1, 64)])
     department_id = SelectField('Department', coerce=int)
+    manager_id = SelectField('Position Manager', coerce=int)
     description = TextAreaField('Description')
     requirements = TextAreaField('Requirements')
     is_active = BooleanField('Active', default=True)
