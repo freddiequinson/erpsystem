@@ -1,1 +1,1 @@
-web: pip install -r requirements-railway.txt && python railway_init.py && gunicorn --log-level debug "app:create_app('production')"
+web: pip install -r requirements-railway.txt && python railway_minimal.py && gunicorn --log-level debug "app_minimal:create_app('production')"
