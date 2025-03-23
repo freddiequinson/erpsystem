@@ -101,8 +101,125 @@ def create_app(config_name='default'):
     @app.route('/dashboard')
     @login_required
     def dashboard():
-        # Return the original dashboard template directly
-        return render_template('dashboard.html')
+        try:
+            # Prepare default values for template variables
+            context = {
+                'employee_count': 0,
+                'product_count': 0,
+                'return_count': 0,
+                'pos_sales_today': 0,
+                'pos_sales_week': 0,
+                'activities': [],
+                'events': [],
+                'recent_orders': [],
+                'low_stock_products': [],
+                'branch_name': 'All Branches'
+            }
+            
+            # Try to get actual data if database is available
+            try:
+                from modules.auth.models import User
+                from modules.inventory.models import Product
+                
+                # Count of employees (users)
+                context['employee_count'] = User.query.count()
+                
+                # Count of products
+                context['product_count'] = Product.query.count()
+                
+                # Get other data if available
+                from modules.pos.models import Order
+                import datetime
+                
+                # Today's sales
+                today = datetime.datetime.now().date()
+                today_orders = Order.query.filter(
+                    Order.order_date >= today,
+                    Order.state == 'paid'
+                ).all()
+                context['pos_sales_today'] = sum(order.total_amount for order in today_orders)
+                
+                # This week's sales
+                week_start = today - datetime.timedelta(days=today.weekday())
+                week_orders = Order.query.filter(
+                    Order.order_date >= week_start,
+                    Order.state == 'paid'
+                ).all()
+                context['pos_sales_week'] = sum(order.total_amount for order in week_orders)
+                
+                # Recent orders
+                context['recent_orders'] = Order.query.order_by(Order.order_date.desc()).limit(5).all()
+                
+                # Low stock products
+                context['low_stock_products'] = Product.query.filter(Product.quantity < 10).limit(5).all()
+                
+            except Exception as e:
+                logger.warning(f"Could not load all dashboard data: {str(e)}")
+                # Continue with default values for any missing data
+            
+            # Render the dashboard template with the context
+            return render_template('dashboard.html', **context)
+            
+        except Exception as e:
+            # Log the error for debugging
+            logger.error(f"Error rendering dashboard: {str(e)}")
+            
+            # Return a simple HTML response instead of the template
+            html = f'''
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>ERP System Dashboard</title>
+                <style>
+                    body {{
+                        font-family: Arial, sans-serif;
+                        margin: 0;
+                        padding: 0;
+                        background-color: #f5f5f5;
+                    }}
+                    .container {{
+                        max-width: 1200px;
+                        margin: 20px auto;
+                        padding: 20px;
+                        background-color: white;
+                        border-radius: 5px;
+                        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+                    }}
+                    h1 {{
+                        color: #333;
+                    }}
+                    .error-details {{
+                        background-color: #f8d7da;
+                        color: #721c24;
+                        padding: 15px;
+                        border-radius: 5px;
+                        margin: 20px 0;
+                    }}
+                    .btn {{
+                        display: inline-block;
+                        padding: 10px 20px;
+                        background-color: #4CAF50;
+                        color: white;
+                        text-decoration: none;
+                        border-radius: 5px;
+                        margin-top: 20px;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>Dashboard</h1>
+                    <p>There was an error rendering the dashboard template.</p>
+                    <div class="error-details">
+                        <p><strong>Error:</strong> {str(e)}</p>
+                    </div>
+                    <p>You can use the custom dashboard instead, which provides basic functionality.</p>
+                    <a href="/custom-dashboard" class="btn">Go to Custom Dashboard</a>
+                </div>
+            </body>
+            </html>
+            '''
+            return html
     
     # Database initialization route
     @app.route('/initialize-database')
@@ -578,6 +695,19 @@ def create_app(config_name='default'):
         session.pop('username', None)
         session.pop('is_admin', None)
         return redirect(url_for('custom_login'))
+    
+    # Placeholder routes for dashboard links
+    @app.route('/all-activities')
+    @login_required
+    def all_activities():
+        return render_template('placeholder.html', title="All Activities", 
+                              message="Activities functionality is coming soon.")
+    
+    @app.route('/all-events')
+    @login_required
+    def all_events():
+        return render_template('placeholder.html', title="All Events", 
+                              message="Events functionality is coming soon.")
     
     # Route to view all activities
     @app.route('/activities')
