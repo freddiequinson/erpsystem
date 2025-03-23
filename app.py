@@ -81,12 +81,61 @@ def create_app(config_name='default'):
     # Home route
     @app.route('/')
     def index():
-        if current_user.is_authenticated:
-            # Redirect sales workers to POS dashboard
-            if current_user.has_role('Sales Worker'):
-                return redirect(url_for('pos.index'))
-            return redirect(url_for('dashboard'))
-        return render_template('index.html')
+        try:
+            # Return a simple HTML page directly
+            html = '''
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Enterprise ERP System</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        margin: 0;
+                        padding: 0;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        height: 100vh;
+                        background-color: #f5f5f5;
+                    }
+                    .container {
+                        text-align: center;
+                        background-color: white;
+                        padding: 40px;
+                        border-radius: 10px;
+                        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                        max-width: 600px;
+                    }
+                    h1 {
+                        color: #333;
+                    }
+                    .btn {
+                        display: inline-block;
+                        background-color: #4CAF50;
+                        color: white;
+                        padding: 10px 20px;
+                        text-decoration: none;
+                        border-radius: 5px;
+                        margin-top: 20px;
+                        font-weight: bold;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>Welcome to Enterprise ERP System</h1>
+                    <p>Your complete business management solution</p>
+                    <a href="/auth/login" class="btn">Login</a>
+                </div>
+            </body>
+            </html>
+            '''
+            return html
+        except Exception as e:
+            # Log the error and return a simple error message
+            logger.error(f"Error in index route: {str(e)}")
+            return f"<h1>Enterprise ERP System</h1><p>Error: {str(e)}</p><a href='/auth/login'>Try Login</a>"
     
     # Dashboard route
     @app.route('/dashboard')
@@ -358,6 +407,60 @@ def create_app(config_name='default'):
                                   recent_returns=[],
                                   activities=[],
                                   events=[])
+    
+    # Database initialization route
+    @app.route('/initialize-database')
+    def initialize_database():
+        try:
+            # Create all tables
+            db.create_all()
+            
+            # Check if admin user exists
+            from modules.auth.models import User, Role, UserRole
+            from modules.inventory.models import StockLocation
+            
+            if User.query.filter_by(username='admin').first() is None:
+                # Create admin user
+                admin_user = User(
+                    username='admin',
+                    email='admin@example.com',
+                    first_name='Admin',
+                    last_name='User',
+                    is_active=True
+                )
+                admin_user.set_password('admin123')
+                
+                # Create admin role if it doesn't exist
+                admin_role = Role.query.filter_by(name='admin').first()
+                if not admin_role:
+                    admin_role = Role(name='admin', description='Administrator')
+                    db.session.add(admin_role)
+                
+                db.session.add(admin_user)
+                db.session.commit()
+                
+                # Assign admin role to admin user
+                user_role = UserRole(user_id=admin_user.id, role_id=admin_role.id)
+                db.session.add(user_role)
+                
+                # Create default stock locations
+                if not StockLocation.query.filter_by(name='Shop Floor').first():
+                    shop_floor = StockLocation(name='Shop Floor', code='SF', is_active=True)
+                    db.session.add(shop_floor)
+                
+                if not StockLocation.query.filter_by(name='Customer').first():
+                    customer = StockLocation(name='Customer', code='CUST', is_active=True)
+                    db.session.add(customer)
+                
+                db.session.commit()
+                return "<h1>Database initialized successfully!</h1><p>Admin user created with username 'admin' and password 'admin123'</p><a href='/auth/login'>Go to Login</a>"
+            else:
+                return "<h1>Database already initialized!</h1><p>Admin user already exists.</p><a href='/auth/login'>Go to Login</a>"
+                
+        except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()
+            return f"<h1>Error initializing database</h1><p>{str(e)}</p><pre>{error_details}</pre>"
     
     # Route to view all activities
     @app.route('/activities')
