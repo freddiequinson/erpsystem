@@ -67,11 +67,11 @@ def manual_init():
             
             # Create default stock locations
             if not StockLocation.query.filter_by(name='Shop Floor').first():
-                shop_floor = StockLocation(name='Shop Floor', code='SF', is_active=True)
+                shop_floor = StockLocation(name='Shop Floor', code='SF', location_type='internal')
                 db.session.add(shop_floor)
             
             if not StockLocation.query.filter_by(name='Customer').first():
-                customer = StockLocation(name='Customer', code='CUST', is_active=True)
+                customer = StockLocation(name='Customer', code='CUST', location_type='customer')
                 db.session.add(customer)
             
             db.session.commit()
