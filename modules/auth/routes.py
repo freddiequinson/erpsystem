@@ -13,7 +13,7 @@ def login():
         # Redirect sales workers to POS dashboard
         if current_user.has_role('Sales Worker'):
             return redirect(url_for('pos.index'))
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('custom_dashboard'))
     
     form = LoginForm()
     if form.validate_on_submit():
@@ -28,7 +28,7 @@ def login():
                 if user.has_role('Sales Worker'):
                     next_page = url_for('pos.index')
                 else:
-                    next_page = url_for('dashboard')
+                    next_page = url_for('custom_dashboard')
             return redirect(next_page)
         flash('Invalid username or password', 'danger')
     
@@ -44,7 +44,7 @@ def logout():
 @auth.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('custom_dashboard'))
     
     form = RegistrationForm()
     if form.validate_on_submit():
