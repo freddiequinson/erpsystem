@@ -801,7 +801,7 @@ def create_app(config_name='default'):
     # Placeholder routes for dashboard links
     @app.route('/all-activities')
     @login_required
-    def all_activities():
+    def view_all_activities():
         return render_template('placeholder.html', title="All Activities", 
                               message="Activities functionality is coming soon.")
     
@@ -814,7 +814,7 @@ def create_app(config_name='default'):
     # Route to view all activities
     @app.route('/activities')
     @login_required
-    def all_activities():
+    def view_activities():
         try:
             from modules.core.models import Activity
             
@@ -919,16 +919,16 @@ def create_app(config_name='default'):
             session['activities_cleared'] = True
             
             flash("All activities have been cleared successfully.", "success")
-            return redirect(url_for('all_activities'))
+            return redirect(url_for('view_activities'))
         
         except Exception as e:
             flash(f"Error clearing activities: {str(e)}", "error")
-            return redirect(url_for('all_activities'))
+            return redirect(url_for('view_activities'))
     
     # Route to view all events
     @app.route('/events')
     @login_required
-    def all_events():
+    def view_all_events():
         try:
             from modules.core.models import Event
             
@@ -1131,7 +1131,7 @@ def create_app(config_name='default'):
                         # Continue even if activity logging fails
                     
                     flash(f"Event '{title}' has been scheduled successfully.", "success")
-                    return redirect(url_for('all_events'))
+                    return redirect(url_for('view_all_events'))
                     
                 except Exception as e:
                     db.session.rollback()
@@ -1147,7 +1147,7 @@ def create_app(config_name='default'):
             print(f"Unexpected error in add_event: {str(e)}")
             print(traceback.format_exc())
             flash(f"Error adding event: {str(e)}", "error")
-            return redirect(url_for('all_events'))
+            return redirect(url_for('view_all_events'))
     
     # Route to edit an event
     @app.route('/events/edit/<int:event_id>', methods=['GET', 'POST'])
@@ -1189,14 +1189,14 @@ def create_app(config_name='default'):
                 )
                 
                 flash(f"Event '{event.title}' has been updated successfully.", "success")
-                return redirect(url_for('all_events'))
+                return redirect(url_for('view_all_events'))
             
             # GET request - show form with event data
             return render_template('event_form.html', event=event)
         
         except Exception as e:
             flash(f"Error editing event: {str(e)}", "error")
-            return redirect(url_for('all_events'))
+            return redirect(url_for('view_all_events'))
     
     # Route to delete an event
     @app.route('/events/delete/<int:event_id>', methods=['POST'])
@@ -1229,7 +1229,7 @@ def create_app(config_name='default'):
         except Exception as e:
             flash(f"Error deleting event: {str(e)}", "error")
             
-        return redirect(url_for('all_events'))
+        return redirect(url_for('view_all_events'))
     
     return app
 
