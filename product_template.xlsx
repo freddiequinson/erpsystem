@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+    <!-- Custom CSS -->
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            min-height: 100vh;
+            background-color: #343a40;
+            color: white;
+        }
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 0.5rem 1rem;
+            margin: 0.2rem 0;
+            border-radius: 0.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .sidebar .nav-link:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .sidebar .nav-link.active {
+            color: white;
+            background-color: #007bff;
+        }
+        .sidebar .nav-link i.nav-icon {
+            margin-right: 0.5rem;
+        }
+        .content {
+            padding: 20px;
+        }
+        .navbar {
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .card {
+            margin-bottom: 20px;
+            border: none;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
+        }
+        .card-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #eee;
+        }
+        .table th {
+            background-color: #f8f9fa;
+        }
+        /* New styles for improved dropdown */
+        .sidebar-dropdown {
+            padding-left: 2.5rem;
+            background-color: #2c3136;
+            border-radius: 0.25rem;
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.3s ease-out;
+        }
+        .sidebar-dropdown.show {
+            max-height: 1000px;
+            transition: max-height 0.5s ease-in;
+        }
+        .sidebar-dropdown .dropdown-item {
+            color: rgba(255, 255, 255, 0.7);
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+            border-radius: 0.25rem;
+            margin: 0.2rem 0;
+            display: block;
+            text-decoration: none;
+        }
+        .sidebar-dropdown .dropdown-item:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .sidebar-dropdown .dropdown-item.active {
+            color: white;
+            background-color: #007bff;
+        }
+        .sidebar-dropdown .dropdown-header {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            padding: 0.5rem 1rem;
+            margin-top: 0.5rem;
+        }
+        .sidebar-dropdown .dropdown-divider {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin: 0.5rem 0;
+        }
+    </style>
+    
+</head>
+<body>
+    
+    <!-- Flash messages for login/register pages -->
+    <div class="container mt-3">
+        
+            
+                
+                    <div class="alert alert-message alert-dismissible fade show" role="alert">
+                        Please log in to access this page.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                
+            
+        
+    </div>
+    
+    <!-- Login/Register content -->
+    
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white text-center">
+                    <h4>Login</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <input id="csrf_token" name="csrf_token" type="hidden" value="ImMxOWE3NTRmMWE1YjEyOTI4NDYwOTk2M2VmNjkwODFlNTI2NmRkZDEi.Z9_NCw.p_sblyLebZWzaDG1srBwFUKIfD0">
+                        
+                        <div class="form-group mb-3">
+                            <label class="form-label" for="username">Username</label>
+                            <input class="form-control" id="username" maxlength="64" minlength="1" name="username" required type="text" value="">
+                            
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label class="form-label" for="password">Password</label>
+                            <input class="form-control" id="password" name="password" required type="password" value="">
+                            
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" id="remember_me" name="remember_me" type="checkbox" value="y">
+                            <label class="form-check-label" for="remember_me">Remember Me</label>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <input class="btn btn-primary" id="submit" name="submit" type="submit" value="Log In">
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer text-center">
+                    <small>Don't have an account? Contact your administrator.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    
+    
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    
+    
+</body>
+</html>
