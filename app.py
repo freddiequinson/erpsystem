@@ -29,23 +29,31 @@ def create_app(config_name='default'):
         logger.info(f"Using database type: {db_type}")
     
     # Initialize extensions with app
-    db.init_app(app)
-    migrate.init_app(app, db)
-    jwt.init_app(app)
+    try:
+        db.init_app(app)
+        migrate.init_app(app, db)
+        jwt.init_app(app)
+        logger.info("Database and extensions initialized successfully")
+    except Exception as e:
+        logger.error(f"Error initializing extensions: {str(e)}")
     
     # Import required modules
-    from modules.auth.models import load_user
-    from modules.auth.routes import auth
-    from modules.inventory.routes import inventory
-    from modules.sales.routes import sales
-    from modules.pos.routes import pos
-    from modules.pos.api import pos_api
-    from modules.employees.routes import employees_bp
-    from modules.reports.routes import reports_bp
-    from modules.purchase.routes import purchase
-    from modules.admin.routes import admin
-    from modules.manager.routes import manager_bp
-    from modules.auth.decorators import sales_worker_forbidden
+    try:
+        from modules.auth.models import load_user
+        from modules.auth.routes import auth
+        from modules.inventory.routes import inventory
+        from modules.sales.routes import sales
+        from modules.pos.routes import pos
+        from modules.pos.api import pos_api
+        from modules.employees.routes import employees_bp
+        from modules.reports.routes import reports_bp
+        from modules.purchase.routes import purchase
+        from modules.admin.routes import admin
+        from modules.manager.routes import manager_bp
+        from modules.auth.decorators import sales_worker_forbidden
+        logger.info("Modules imported successfully")
+    except Exception as e:
+        logger.error(f"Error importing modules: {str(e)}")
     
     # Set up login manager
     login_manager.init_app(app)
@@ -94,12 +102,16 @@ def create_app(config_name='default'):
     @login_required
     def dashboard():
         try:
-            # Redirect to the custom dashboard that doesn't rely on the database
-            return redirect(url_for('custom_dashboard'))
+            # Try to access necessary database tables
+            user_count = User.query.count()
+            product_count = Product.query.count()
+            
+            # If we get here, the database is working
+            return render_template('dashboard.html')
         except Exception as e:
-            logger.error(f"Error in dashboard route: {str(e)}")
-            import traceback
-            logger.error(traceback.format_exc())
+            # If there's a database error, redirect to the custom dashboard
+            logger.error(f"Error accessing dashboard: {str(e)}")
+            flash("There was an error accessing the dashboard. Using simplified dashboard instead.", "warning")
             return redirect(url_for('custom_dashboard'))
     
     # Database initialization route
@@ -108,53 +120,141 @@ def create_app(config_name='default'):
         try:
             # Create all tables
             db.create_all()
+            logger.info("Database tables created successfully")
             
             # Check if admin user exists
-            from modules.auth.models import User, Role, UserRole
-            from modules.inventory.models import StockLocation
-            
-            if User.query.filter_by(username='admin').first() is None:
+            admin_user = User.query.filter_by(username='admin').first()
+            if admin_user is None:
                 # Create admin user
+                admin_role = Role.query.filter_by(name='Admin').first()
+                if admin_role is None:
+                    admin_role = Role(name='Admin', description='Administrator')
+                    db.session.add(admin_role)
+                    logger.info("Admin role created")
+                
                 admin_user = User(
                     username='admin',
                     email='admin@example.com',
-                    first_name='Admin',
-                    last_name='User',
-                    is_active=True
+                    role=admin_role
                 )
                 admin_user.set_password('admin123')
-                
-                # Create admin role if it doesn't exist
-                admin_role = Role.query.filter_by(name='admin').first()
-                if not admin_role:
-                    admin_role = Role(name='admin', description='Administrator')
-                    db.session.add(admin_role)
-                
                 db.session.add(admin_user)
                 db.session.commit()
-                
-                # Assign admin role to admin user
-                user_role = UserRole(user_id=admin_user.id, role_id=admin_role.id)
-                db.session.add(user_role)
-                
-                # Create default stock locations
-                if not StockLocation.query.filter_by(name='Shop Floor').first():
-                    shop_floor = StockLocation(name='Shop Floor', code='SF', location_type='internal')
-                    db.session.add(shop_floor)
-                
-                if not StockLocation.query.filter_by(name='Customer').first():
-                    customer = StockLocation(name='Customer', code='CUST', location_type='customer')
-                    db.session.add(customer)
-                
-                db.session.commit()
-                return "<h1>Database initialized successfully!</h1><p>Admin user created with username 'admin' and password 'admin123'</p><a href='/auth/login'>Go to Login</a>"
+                logger.info("Admin user created successfully")
+                message = "Database initialized successfully. Admin user created with username 'admin' and password 'admin123'."
             else:
-                return "<h1>Database already initialized!</h1><p>Admin user already exists.</p><a href='/auth/login'>Go to Login</a>"
-                
+                logger.info("Admin user already exists")
+                message = "Database initialized successfully. Admin user already exists."
+            
+            return f'''
+            <html>
+                <head>
+                    <title>Database Initialized</title>
+                    <style>
+                        body {{
+                            font-family: Arial, sans-serif;
+                            margin: 0;
+                            padding: 20px;
+                            background-color: #f5f5f5;
+                            text-align: center;
+                        }}
+                        .container {{
+                            max-width: 800px;
+                            margin: 0 auto;
+                            background-color: white;
+                            padding: 20px;
+                            border-radius: 5px;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                        }}
+                        h1 {{
+                            color: #4CAF50;
+                        }}
+                        .message {{
+                            margin: 20px 0;
+                            padding: 10px;
+                            background-color: #e8f5e9;
+                            border-radius: 5px;
+                        }}
+                        .btn {{
+                            display: inline-block;
+                            padding: 10px 20px;
+                            background-color: #4CAF50;
+                            color: white;
+                            text-decoration: none;
+                            border-radius: 5px;
+                            margin-top: 20px;
+                        }}
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h1>Database Initialization Complete</h1>
+                        <div class="message">
+                            {message}
+                        </div>
+                        <p>You can now proceed to the dashboard to start using the ERP system.</p>
+                        <a href="/custom-dashboard" class="btn">Go to Dashboard</a>
+                    </div>
+                </body>
+            </html>
+            '''
         except Exception as e:
-            import traceback
-            error_details = traceback.format_exc()
-            return f"<h1>Error initializing database</h1><p>{str(e)}</p><pre>{error_details}</pre>"
+            logger.error(f"Error initializing database: {str(e)}")
+            error_message = str(e)
+            return f'''
+            <html>
+                <head>
+                    <title>Database Initialization Error</title>
+                    <style>
+                        body {{
+                            font-family: Arial, sans-serif;
+                            margin: 0;
+                            padding: 20px;
+                            background-color: #f5f5f5;
+                            text-align: center;
+                        }}
+                        .container {{
+                            max-width: 800px;
+                            margin: 0 auto;
+                            background-color: white;
+                            padding: 20px;
+                            border-radius: 5px;
+                            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                        }}
+                        h1 {{
+                            color: #f44336;
+                        }}
+                        .error {{
+                            margin: 20px 0;
+                            padding: 10px;
+                            background-color: #ffebee;
+                            border-radius: 5px;
+                            color: #d32f2f;
+                        }}
+                        .btn {{
+                            display: inline-block;
+                            padding: 10px 20px;
+                            background-color: #2196F3;
+                            color: white;
+                            text-decoration: none;
+                            border-radius: 5px;
+                            margin-top: 20px;
+                        }}
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h1>Database Initialization Error</h1>
+                        <div class="error">
+                            <p>An error occurred while initializing the database:</p>
+                            <p>{error_message}</p>
+                        </div>
+                        <p>Please check your database configuration and try again.</p>
+                        <a href="/custom-dashboard" class="btn">Return to Dashboard</a>
+                    </div>
+                </body>
+            </html>
+            '''
     
     # Custom login route that doesn't rely on the database
     @app.route('/custom-login', methods=['GET', 'POST'])
@@ -286,6 +386,12 @@ def create_app(config_name='default'):
             logger.error(f"Database not initialized: {str(e)}")
             db_initialized = False
         
+        # Get username safely
+        try:
+            username = current_user.username
+        except:
+            username = "User"
+        
         html = f'''
         <!DOCTYPE html>
         <html>
@@ -413,7 +519,7 @@ def create_app(config_name='default'):
             <div class="header">
                 <h1>ERP System Dashboard</h1>
                 <div class="user-info">
-                    <span>Welcome, {current_user.username}</span>
+                    <span>Welcome, {username}</span>
                     <a href="/auth/logout" class="logout-btn">Logout</a>
                 </div>
             </div>
@@ -426,8 +532,7 @@ def create_app(config_name='default'):
                     <div class="system-status">
                         <div class="status-item">
                             <h3>Database</h3>
-                            <p class="{'status-good' if db_initialized else 'status-warning'}">{
-                            'Initialized' if db_initialized else 'Needs Initialization'}</p>
+                            <p class="{'status-good' if db_initialized else 'status-warning'}">{'Initialized' if db_initialized else 'Needs Initialization'}</p>
                         </div>
                         <div class="status-item">
                             <h3>Application</h3>
