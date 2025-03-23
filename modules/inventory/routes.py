@@ -879,8 +879,7 @@ def process_product_import(df):
                             warehouse = Warehouse(
                                 name=warehouse_name,
                                 code=warehouse_code,
-                                address=f"{warehouse_name} Address",
-                                is_active=True
+                                address=f"{warehouse_name} Address"
                             )
                             db.session.add(warehouse)
                             db.session.flush()  # Use flush instead of commit
@@ -890,8 +889,7 @@ def process_product_import(df):
                                 name=f"{warehouse.name} Stock",
                                 code=f"STOCK-{warehouse.code}",
                                 warehouse_id=warehouse.id,
-                                location_type='internal',
-                                is_active=True
+                                location_type='internal'
                             )
                             db.session.add(stock_location)
                             db.session.flush()  # Use flush instead of commit
