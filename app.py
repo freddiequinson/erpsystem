@@ -82,60 +82,12 @@ def create_app(config_name='default'):
     @app.route('/')
     def index():
         try:
-            # Return a simple HTML page directly
-            html = '''
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Enterprise ERP System</title>
-                <style>
-                    body {
-                        font-family: Arial, sans-serif;
-                        margin: 0;
-                        padding: 0;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        height: 100vh;
-                        background-color: #f5f5f5;
-                    }
-                    .container {
-                        text-align: center;
-                        background-color: white;
-                        padding: 40px;
-                        border-radius: 10px;
-                        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-                        max-width: 600px;
-                    }
-                    h1 {
-                        color: #333;
-                    }
-                    .btn {
-                        display: inline-block;
-                        background-color: #4CAF50;
-                        color: white;
-                        padding: 10px 20px;
-                        text-decoration: none;
-                        border-radius: 5px;
-                        margin-top: 20px;
-                        font-weight: bold;
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h1>Welcome to Enterprise ERP System</h1>
-                    <p>Your complete business management solution</p>
-                    <a href="/auth/login" class="btn">Login</a>
-                </div>
-            </body>
-            </html>
-            '''
-            return html
+            # Redirect to custom login page
+            return redirect(url_for('custom_login'))
         except Exception as e:
             # Log the error and return a simple error message
             logger.error(f"Error in index route: {str(e)}")
-            return f"<h1>Enterprise ERP System</h1><p>Error: {str(e)}</p><a href='/auth/login'>Try Login</a>"
+            return f"<h1>Enterprise ERP System</h1><p>Error: {str(e)}</p><a href='/custom-login'>Try Login</a>"
     
     # Dashboard route
     @app.route('/dashboard')
@@ -461,6 +413,275 @@ def create_app(config_name='default'):
             import traceback
             error_details = traceback.format_exc()
             return f"<h1>Error initializing database</h1><p>{str(e)}</p><pre>{error_details}</pre>"
+    
+    # Custom login route that doesn't rely on the database
+    @app.route('/custom-login', methods=['GET', 'POST'])
+    def custom_login():
+        error_message = None
+        
+        if request.method == 'POST':
+            username = request.form.get('username')
+            password = request.form.get('password')
+            
+            if username == 'admin' and password == 'admin123':
+                # Create a simple session without database
+                session['logged_in'] = True
+                session['username'] = username
+                session['is_admin'] = True
+                
+                # Redirect to custom dashboard
+                return redirect(url_for('custom_dashboard'))
+            else:
+                error_message = "Invalid username or password"
+        
+        # Return a simple login form
+        html = f'''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>ERP System - Login</title>
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    margin: 0;
+                    padding: 0;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100vh;
+                    background-color: #f5f5f5;
+                }}
+                .login-container {{
+                    background-color: white;
+                    padding: 40px;
+                    border-radius: 10px;
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                    width: 350px;
+                }}
+                h1 {{
+                    text-align: center;
+                    color: #333;
+                    margin-bottom: 30px;
+                }}
+                .form-group {{
+                    margin-bottom: 20px;
+                }}
+                label {{
+                    display: block;
+                    margin-bottom: 5px;
+                    font-weight: bold;
+                }}
+                input[type="text"], input[type="password"] {{
+                    width: 100%;
+                    padding: 10px;
+                    border: 1px solid #ddd;
+                    border-radius: 5px;
+                    box-sizing: border-box;
+                }}
+                .btn {{
+                    display: block;
+                    width: 100%;
+                    padding: 10px;
+                    background-color: #4CAF50;
+                    color: white;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-size: 16px;
+                    text-align: center;
+                }}
+                .error {{
+                    color: red;
+                    margin-bottom: 15px;
+                }}
+                .info {{
+                    margin-top: 20px;
+                    text-align: center;
+                    font-size: 14px;
+                    color: #666;
+                }}
+                .db-link {{
+                    display: block;
+                    margin-top: 20px;
+                    text-align: center;
+                    color: #4CAF50;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="login-container">
+                <h1>ERP System Login</h1>
+                {f'<p class="error">{error_message}</p>' if error_message else ''}
+                <form method="POST">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn">Login</button>
+                </form>
+                <p class="info">Use username: <strong>admin</strong> and password: <strong>admin123</strong></p>
+                <a href="/initialize-database" class="db-link">Initialize Database</a>
+            </div>
+        </body>
+        </html>
+        '''
+        return html
+        
+    # Custom dashboard route that doesn't rely on the database
+    @app.route('/custom-dashboard')
+    def custom_dashboard():
+        if not session.get('logged_in'):
+            return redirect(url_for('custom_login'))
+            
+        # Return a simple dashboard
+        html = '''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>ERP System - Dashboard</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 0;
+                    padding: 0;
+                    background-color: #f5f5f5;
+                }
+                .header {
+                    background-color: #333;
+                    color: white;
+                    padding: 15px 20px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                .header h1 {
+                    margin: 0;
+                    font-size: 24px;
+                }
+                .user-info {
+                    display: flex;
+                    align-items: center;
+                }
+                .user-info span {
+                    margin-right: 15px;
+                }
+                .logout-btn {
+                    background-color: #f44336;
+                    color: white;
+                    border: none;
+                    padding: 8px 15px;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    text-decoration: none;
+                }
+                .container {
+                    padding: 20px;
+                }
+                .dashboard-card {
+                    background-color: white;
+                    border-radius: 10px;
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                    padding: 20px;
+                    margin-bottom: 20px;
+                }
+                .card-title {
+                    margin-top: 0;
+                    color: #333;
+                    border-bottom: 1px solid #eee;
+                    padding-bottom: 10px;
+                }
+                .system-status {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-top: 20px;
+                }
+                .status-item {
+                    text-align: center;
+                    padding: 15px;
+                    background-color: #f9f9f9;
+                    border-radius: 5px;
+                    flex: 1;
+                    margin: 0 10px;
+                }
+                .status-item h3 {
+                    margin-top: 0;
+                }
+                .status-good {
+                    color: #4CAF50;
+                }
+                .status-warning {
+                    color: #ff9800;
+                }
+                .status-error {
+                    color: #f44336;
+                }
+                .action-buttons {
+                    margin-top: 20px;
+                    display: flex;
+                    justify-content: center;
+                }
+                .action-btn {
+                    display: inline-block;
+                    padding: 10px 20px;
+                    background-color: #4CAF50;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 5px;
+                    margin: 0 10px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>ERP System Dashboard</h1>
+                <div class="user-info">
+                    <span>Welcome, Admin</span>
+                    <a href="/custom-logout" class="logout-btn">Logout</a>
+                </div>
+            </div>
+            
+            <div class="container">
+                <div class="dashboard-card">
+                    <h2 class="card-title">System Status</h2>
+                    <p>This is a simplified dashboard that doesn't rely on the database. Use the buttons below to manage your system.</p>
+                    
+                    <div class="system-status">
+                        <div class="status-item">
+                            <h3>Database</h3>
+                            <p class="status-warning">Needs Initialization</p>
+                        </div>
+                        <div class="status-item">
+                            <h3>Application</h3>
+                            <p class="status-good">Running</p>
+                        </div>
+                        <div class="status-item">
+                            <h3>User Authentication</h3>
+                            <p class="status-good">Active</p>
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <a href="/initialize-database" class="action-btn">Initialize Database</a>
+                        <a href="/" class="action-btn">Home Page</a>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        '''
+        return html
+        
+    # Custom logout route
+    @app.route('/custom-logout')
+    def custom_logout():
+        session.pop('logged_in', None)
+        session.pop('username', None)
+        session.pop('is_admin', None)
+        return redirect(url_for('custom_login'))
     
     # Route to view all activities
     @app.route('/activities')
