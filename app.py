@@ -86,7 +86,7 @@ def create_app(config_name='default'):
             if current_user.has_role('Sales Worker'):
                 return redirect(url_for('pos.index'))
             return redirect(url_for('dashboard'))
-        return redirect(url_for('auth.login'))
+        return render_template('index.html')
     
     # Dashboard route
     @app.route('/dashboard')
