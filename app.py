@@ -273,128 +273,161 @@ def create_app(config_name='default'):
         '''
         return html
         
-    # Custom dashboard route that doesn't rely on the database
+    # Custom dashboard route
     @app.route('/custom-dashboard')
+    @login_required
     def custom_dashboard():
-        if not session.get('logged_in'):
-            return redirect(url_for('custom_login'))
-            
-        # Return a simple dashboard
-        html = '''
+        # Check if database has been initialized
+        try:
+            # Try to query the User table to check if database is initialized
+            user_count = User.query.count()
+            db_initialized = True
+        except Exception as e:
+            logger.error(f"Database not initialized: {str(e)}")
+            db_initialized = False
+        
+        html = f'''
         <!DOCTYPE html>
         <html>
         <head>
-            <title>ERP System - Dashboard</title>
+            <title>ERP System Dashboard</title>
             <style>
-                body {
+                body {{
                     font-family: Arial, sans-serif;
                     margin: 0;
                     padding: 0;
                     background-color: #f5f5f5;
-                }
-                .header {
+                }}
+                .header {{
                     background-color: #333;
                     color: white;
                     padding: 15px 20px;
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                }
-                .header h1 {
+                }}
+                .header h1 {{
                     margin: 0;
-                    font-size: 24px;
-                }
-                .user-info {
+                }}
+                .user-info {{
                     display: flex;
                     align-items: center;
-                }
-                .user-info span {
-                    margin-right: 15px;
-                }
-                .logout-btn {
-                    background-color: #f44336;
+                }}
+                .logout-btn {{
                     color: white;
-                    border: none;
-                    padding: 8px 15px;
-                    border-radius: 5px;
-                    cursor: pointer;
                     text-decoration: none;
-                }
-                .container {
-                    padding: 20px;
-                }
-                .dashboard-card {
+                    margin-left: 15px;
+                    padding: 5px 10px;
+                    background-color: #d9534f;
+                    border-radius: 3px;
+                }}
+                .container {{
+                    max-width: 1200px;
+                    margin: 20px auto;
+                    padding: 0 20px;
+                }}
+                .dashboard-card {{
                     background-color: white;
-                    border-radius: 10px;
-                    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                    border-radius: 5px;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
                     padding: 20px;
                     margin-bottom: 20px;
-                }
-                .card-title {
+                }}
+                .card-title {{
                     margin-top: 0;
                     color: #333;
                     border-bottom: 1px solid #eee;
                     padding-bottom: 10px;
-                }
-                .system-status {
+                }}
+                .system-status {{
                     display: flex;
-                    justify-content: space-between;
-                    margin-top: 20px;
-                }
-                .status-item {
+                    justify-content: space-around;
+                    margin: 20px 0;
+                }}
+                .status-item {{
                     text-align: center;
                     padding: 15px;
-                    background-color: #f9f9f9;
+                    border: 1px solid #eee;
                     border-radius: 5px;
-                    flex: 1;
-                    margin: 0 10px;
-                }
-                .status-item h3 {
+                    width: 30%;
+                }}
+                .status-item h3 {{
                     margin-top: 0;
-                }
-                .status-good {
+                }}
+                .status-good {{
                     color: #4CAF50;
-                }
-                .status-warning {
+                }}
+                .status-warning {{
                     color: #ff9800;
-                }
-                .status-error {
+                }}
+                .status-error {{
                     color: #f44336;
-                }
-                .action-buttons {
+                }}
+                .action-buttons {{
                     margin-top: 20px;
                     display: flex;
                     justify-content: center;
-                }
-                .action-btn {
+                    flex-wrap: wrap;
+                }}
+                .action-btn {{
                     display: inline-block;
                     padding: 10px 20px;
                     background-color: #4CAF50;
                     color: white;
                     text-decoration: none;
                     border-radius: 5px;
-                    margin: 0 10px;
-                }
+                    margin: 10px;
+                }}
+                .menu-card {{
+                    display: flex;
+                    flex-wrap: wrap;
+                    justify-content: space-between;
+                }}
+                .menu-item {{
+                    width: 30%;
+                    margin-bottom: 20px;
+                    padding: 15px;
+                    background-color: #f9f9f9;
+                    border-radius: 5px;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                }}
+                .menu-item h3 {{
+                    margin-top: 0;
+                    color: #333;
+                }}
+                .menu-item p {{
+                    color: #666;
+                    margin-bottom: 15px;
+                }}
+                .menu-btn {{
+                    display: inline-block;
+                    padding: 8px 15px;
+                    background-color: #2196F3;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 3px;
+                }}
             </style>
         </head>
         <body>
             <div class="header">
                 <h1>ERP System Dashboard</h1>
                 <div class="user-info">
-                    <span>Welcome, Admin</span>
-                    <a href="/custom-logout" class="logout-btn">Logout</a>
+                    <span>Welcome, {current_user.username}</span>
+                    <a href="/auth/logout" class="logout-btn">Logout</a>
                 </div>
             </div>
             
             <div class="container">
                 <div class="dashboard-card">
                     <h2 class="card-title">System Status</h2>
-                    <p>This is a simplified dashboard that doesn't rely on the database. Use the buttons below to manage your system.</p>
+                    <p>This is a simplified dashboard that provides access to key system functions. Use the options below to navigate your ERP system.</p>
                     
                     <div class="system-status">
                         <div class="status-item">
                             <h3>Database</h3>
-                            <p class="status-warning">Needs Initialization</p>
+                            <p class="{'status-good' if db_initialized else 'status-warning'}">{
+                            'Initialized' if db_initialized else 'Needs Initialization'}</p>
                         </div>
                         <div class="status-item">
                             <h3>Application</h3>
@@ -407,8 +440,33 @@ def create_app(config_name='default'):
                     </div>
                     
                     <div class="action-buttons">
-                        <a href="/initialize-database" class="action-btn">Initialize Database</a>
+                        {'<a href="/dashboard" class="action-btn">Original Dashboard</a>' if db_initialized else '<a href="/initialize-database" class="action-btn">Initialize Database</a>'}
                         <a href="/" class="action-btn">Home Page</a>
+                        <a href="/auth/logout" class="action-btn">Logout</a>
+                    </div>
+                </div>
+                
+                <div class="dashboard-card">
+                    <h2 class="card-title">System Navigation</h2>
+                    
+                    <div class="menu-card">
+                        <div class="menu-item">
+                            <h3>Inventory</h3>
+                            <p>Manage products, stock levels, and locations</p>
+                            <a href="/inventory/products" class="menu-btn">Products</a>
+                        </div>
+                        
+                        <div class="menu-item">
+                            <h3>Sales</h3>
+                            <p>Manage orders, customers, and sales reports</p>
+                            <a href="/pos/index" class="menu-btn">POS System</a>
+                        </div>
+                        
+                        <div class="menu-item">
+                            <h3>Users</h3>
+                            <p>Manage system users and permissions</p>
+                            <a href="/auth/users" class="menu-btn">Users</a>
+                        </div>
                     </div>
                 </div>
             </div>
