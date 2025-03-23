@@ -101,18 +101,8 @@ def create_app(config_name='default'):
     @app.route('/dashboard')
     @login_required
     def dashboard():
-        try:
-            # Try to access necessary database tables
-            user_count = User.query.count()
-            product_count = Product.query.count()
-            
-            # If we get here, the database is working
-            return render_template('dashboard.html')
-        except Exception as e:
-            # If there's a database error, redirect to the custom dashboard
-            logger.error(f"Error accessing dashboard: {str(e)}")
-            flash("There was an error accessing the dashboard. Using simplified dashboard instead.", "warning")
-            return redirect(url_for('custom_dashboard'))
+        # Return the original dashboard template directly
+        return render_template('dashboard.html')
     
     # Database initialization route
     @app.route('/initialize-database')
@@ -545,7 +535,8 @@ def create_app(config_name='default'):
                     </div>
                     
                     <div class="action-buttons">
-                        {'<a href="/dashboard" class="action-btn">Original Dashboard</a>' if db_initialized else '<a href="/initialize-database" class="action-btn">Initialize Database</a>'}
+                        <a href="/dashboard" class="action-btn">Original Dashboard</a>
+                        {'<a href="/initialize-database" class="action-btn">Initialize Database</a>' if not db_initialized else ''}
                         <a href="/" class="action-btn">Home Page</a>
                         <a href="/auth/logout" class="action-btn">Logout</a>
                     </div>
