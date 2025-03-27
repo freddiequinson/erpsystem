@@ -659,6 +659,8 @@ def preview_excel():
             temp_dir = tempfile.gettempdir()
             file_id = str(uuid.uuid4())
             file_path = os.path.join(temp_dir, f"{file_id}.xlsx")
+            
+            # Save the file to the temporary location
             file.save(file_path)
             
             # Store file path for later use
@@ -697,7 +699,7 @@ def preview_excel():
             
         except Exception as e:
             print(f"Error in preview_excel: {str(e)}")
-            return jsonify({'error': str(e)}), 500
+            return jsonify({'error': f"Error previewing file: {str(e)}"}), 500
     else:
         return jsonify({'error': 'Allowed file types are xlsx and xls'}), 400
 
@@ -715,8 +717,19 @@ def import_products():
         
         if file and '.' in file.filename and file.filename.rsplit('.', 1)[1].lower() in ['xlsx', 'xls']:
             try:
+                # Create a temporary file
+                temp_dir = tempfile.gettempdir()
+                file_id = str(uuid.uuid4())
+                file_path = os.path.join(temp_dir, f"{file_id}.xlsx")
+                
+                # Save the file
+                file.save(file_path)
+                
                 # Read Excel file
-                df = pd.read_excel(file)
+                df = pd.read_excel(file_path)
+                
+                # Clean up the temporary file
+                os.remove(file_path)
                 
                 # Process data without mapping
                 return process_product_import(df)
@@ -831,66 +844,61 @@ def process_product_import(df):
         pos_categories_created = 0
         errors = []
         
+        # Create a new session for each row to isolate transactions
         for index, row in df.iterrows():
+            # Start a new transaction for each row
             try:
                 # Check if product exists by SKU
-                product = Product.query.filter_by(sku=row['sku']).first()
+                product = Product.query.filter_by(sku=str(row['sku']).strip()).first()
                 
                 # Get or create category if it exists in the data
                 category_id = None
                 if 'category' in df.columns and not pd.isna(row['category']):
-                    category = Category.query.filter_by(name=row['category']).first()
+                    category_name = str(row['category']).strip()
+                    category = Category.query.filter_by(name=category_name).first()
                     if not category:
-                        category = Category(name=row['category'])
+                        category = Category(name=category_name)
                         db.session.add(category)
-                        db.session.commit()
+                        db.session.flush()  # Use flush instead of commit to keep transaction open
                         categories_created += 1
                     category_id = category.id
                 
                 # Get or create warehouse if it exists in the data
                 warehouse_id = None
                 if 'warehouse' in df.columns and not pd.isna(row['warehouse']):
-                    warehouse = Warehouse.query.filter_by(name=row['warehouse']).first()
+                    warehouse_name = str(row['warehouse']).strip()
+                    warehouse = Warehouse.query.filter_by(name=warehouse_name).first()
                     if not warehouse:
                         try:
-                            # Try to create warehouse with is_active parameter
+                            # Create a warehouse code that's unique
+                            warehouse_code = warehouse_name[:5].upper()
+                            existing_code = Warehouse.query.filter_by(code=warehouse_code).first()
+                            if existing_code:
+                                warehouse_code = f"{warehouse_code}{warehouses_created}"
+                                
                             warehouse = Warehouse(
-                                name=row['warehouse'],
-                                code=row['warehouse'][:5].upper(),
-                                address=f"{row['warehouse']} Address",
-                                is_active=True
+                                name=warehouse_name,
+                                code=warehouse_code,
+                                address=f"{warehouse_name} Address"
                             )
-                        except TypeError:
-                            # If is_active is not a valid parameter, create without it
-                            warehouse = Warehouse(
-                                name=row['warehouse'],
-                                code=row['warehouse'][:5].upper(),
-                                address=f"{row['warehouse']} Address"
-                            )
-                        
-                        db.session.add(warehouse)
-                        db.session.commit()
-                        
-                        # Create default stock location for the warehouse
-                        try:
-                            # Try to create stock location with is_active parameter
+                            db.session.add(warehouse)
+                            db.session.flush()  # Use flush instead of commit
+                            
+                            # Create default stock location for the warehouse
                             stock_location = StockLocation(
                                 name=f"{warehouse.name} Stock",
                                 code=f"STOCK-{warehouse.code}",
                                 warehouse_id=warehouse.id,
-                                is_active=True
+                                location_type='internal'
                             )
-                        except TypeError:
-                            # If is_active is not a valid parameter, create without it
-                            stock_location = StockLocation(
-                                name=f"{warehouse.name} Stock",
-                                code=f"STOCK-{warehouse.code}",
-                                warehouse_id=warehouse.id
-                            )
-                        
-                        db.session.add(stock_location)
-                        db.session.commit()
-                        warehouses_created += 1
+                            db.session.add(stock_location)
+                            db.session.flush()  # Use flush instead of commit
+                            warehouses_created += 1
+                        except Exception as e:
+                            print(f"Error creating warehouse: {str(e)}")
+                            db.session.rollback()
+                            errors.append(f"Row {index+1}: Error creating warehouse - {str(e)}")
+                            continue
                     warehouse_id = warehouse.id
                 
                 # Get default UOM if not specified
@@ -906,198 +914,121 @@ def process_product_import(df):
                             ratio=1.0
                         )
                         db.session.add(default_uom)
-                        db.session.commit()
+                        db.session.flush()  # Use flush instead of commit
                     uom_id = default_uom.id
                 except Exception as e:
                     print(f"Error getting/creating UOM: {str(e)}")
-                    # Rollback the session if there was an error
-                    db.session.rollback()
                     # Try to find any existing UOM to use as fallback
                     any_uom = UnitOfMeasure.query.first()
-                    uom_id = any_uom.id if any_uom else 1
+                    uom_id = any_uom.id if any_uom else None
+                    if not uom_id:
+                        db.session.rollback()
+                        errors.append(f"Row {index+1}: Error with UOM - {str(e)}")
+                        continue
                 
+                # Handle product data
                 if product:
                     # Update existing product
-                    if 'name' in df.columns and not pd.isna(row['name']):
-                        product.name = row['name']
-                    if category_id:
-                        product.category_id = category_id
-                    if 'cost_price' in df.columns and not pd.isna(row['cost_price']):
-                        product.cost_price = float(row['cost_price'])
-                    if 'sale_price' in df.columns and not pd.isna(row['sale_price']):
-                        product.sale_price = float(row['sale_price'])
-                    
-                    # Optional fields
-                    if 'description' in df.columns and not pd.isna(row['description']):
-                        product.description = row['description']
-                    if 'barcode' in df.columns and not pd.isna(row['barcode']):
-                        product.barcode = row['barcode']
-                    if 'min_stock' in df.columns and not pd.isna(row['min_stock']):
-                        product.min_stock = float(row['min_stock'])
-                    if 'max_stock' in df.columns and not pd.isna(row['max_stock']):
-                        product.max_stock = float(row['max_stock'])
-                    if 'weight' in df.columns and not pd.isna(row['weight']):
-                        product.weight = float(row['weight'])
-                    if 'volume' in df.columns and not pd.isna(row['volume']):
-                        product.volume = float(row['volume'])
-                    if 'is_active' in df.columns and not pd.isna(row['is_active']):
-                        product.is_active = bool(row['is_active'])
-                    if 'available_in_pos' in df.columns and not pd.isna(row['available_in_pos']):
-                        product.available_in_pos = bool(row['available_in_pos'])
-                    
-                    products_updated += 1
+                    try:
+                        if 'name' in df.columns and not pd.isna(row['name']):
+                            product.name = str(row['name']).strip()
+                        if category_id:
+                            product.category_id = category_id
+                        if 'cost_price' in df.columns and not pd.isna(row['cost_price']):
+                            product.cost_price = float(row['cost_price'])
+                        if 'sale_price' in df.columns and not pd.isna(row['sale_price']):
+                            product.sale_price = float(row['sale_price'])
+                        
+                        # Optional fields
+                        if 'description' in df.columns and not pd.isna(row['description']):
+                            product.description = str(row['description']).strip()
+                        if 'barcode' in df.columns and not pd.isna(row['barcode']):
+                            product.barcode = str(row['barcode']).strip()
+                        if 'min_stock' in df.columns and not pd.isna(row['min_stock']):
+                            product.min_stock = float(row['min_stock'])
+                        if 'max_stock' in df.columns and not pd.isna(row['max_stock']):
+                            product.max_stock = float(row['max_stock'])
+                        if 'weight' in df.columns and not pd.isna(row['weight']):
+                            product.weight = float(row['weight'])
+                        if 'volume' in df.columns and not pd.isna(row['volume']):
+                            product.volume = float(row['volume'])
+                        if 'is_active' in df.columns and not pd.isna(row['is_active']):
+                            product.is_active = bool(row['is_active'])
+                        
+                        db.session.flush()  # Use flush instead of commit
+                        products_updated += 1
+                    except Exception as e:
+                        db.session.rollback()
+                        errors.append(f"Row {index+1}: Error updating product {product.sku} - {str(e)}")
+                        continue
                 else:
                     # Create new product with required fields
-                    new_product = Product(
-                        name=row['name'],
-                        sku=row['sku'],
-                        uom_id=uom_id
-                    )
-                    
-                    # Set optional fields if they exist in the data
-                    if category_id:
-                        new_product.category_id = category_id
-                    if 'cost_price' in df.columns and not pd.isna(row['cost_price']):
-                        new_product.cost_price = float(row['cost_price'])
-                    if 'sale_price' in df.columns and not pd.isna(row['sale_price']):
-                        new_product.sale_price = float(row['sale_price'])
-                    if 'description' in df.columns and not pd.isna(row['description']):
-                        new_product.description = row['description']
-                    if 'barcode' in df.columns and not pd.isna(row['barcode']):
-                        new_product.barcode = row['barcode']
-                    if 'min_stock' in df.columns and not pd.isna(row['min_stock']):
-                        new_product.min_stock = float(row['min_stock'])
-                    if 'max_stock' in df.columns and not pd.isna(row['max_stock']):
-                        new_product.max_stock = float(row['max_stock'])
-                    if 'weight' in df.columns and not pd.isna(row['weight']):
-                        new_product.weight = float(row['weight'])
-                    if 'volume' in df.columns and not pd.isna(row['volume']):
-                        new_product.volume = float(row['volume'])
-                    if 'is_active' in df.columns and not pd.isna(row['is_active']):
-                        new_product.is_active = bool(row['is_active'])
-                    if 'available_in_pos' in df.columns and not pd.isna(row['available_in_pos']):
-                        new_product.available_in_pos = bool(row['available_in_pos'])
-                    
-                    db.session.add(new_product)
-                    db.session.commit()
-                    product = new_product
-                    products_created += 1
-                
-                # Handle stock quantity updates if different from current
-                if 'quantity' in df.columns and not pd.isna(row['quantity']):
-                    # Get the current quantity
-                    current_quantity = product.available_quantity
-                    target_quantity = float(row['quantity'])
-                    
-                    # Only create a stock move if the quantities are different
-                    if target_quantity != current_quantity:
-                        # Find or create a warehouse if not specified
-                        if not warehouse_id:
-                            warehouse = Warehouse.query.first()
-                            if not warehouse:
-                                # Create a default warehouse if none exists
-                                warehouse = Warehouse(
-                                    name='Main Warehouse',
-                                    code='MAIN',
-                                    address='Default Address'
-                                )
-                                db.session.add(warehouse)
-                                db.session.commit()
-                                
-                                # Create default stock location
-                                stock_location = StockLocation(
-                                    name='Main Stock',
-                                    warehouse_id=warehouse.id,
-                                    location_type='internal'
-                                )
-                                db.session.add(stock_location)
-                                db.session.commit()
-                            warehouse_id = warehouse.id
-                        
-                        # Get the warehouse's stock location
-                        stock_location = StockLocation.query.filter_by(warehouse_id=warehouse_id, location_type='internal').first()
-                        if not stock_location:
-                            # Create a stock location if none exists
-                            warehouse = Warehouse.query.get(warehouse_id)
-                            stock_location = StockLocation(
-                                name=f"{warehouse.name} Stock",
-                                warehouse_id=warehouse_id,
-                                location_type='internal'
-                            )
-                            db.session.add(stock_location)
-                            db.session.commit()
-                        
-                        # Create a supplier location if it doesn't exist
-                        supplier_location = StockLocation.query.filter_by(location_type='supplier').first()
-                        if not supplier_location:
-                            supplier_location = StockLocation(
-                                name='Supplier',
-                                location_type='supplier'
-                            )
-                            db.session.add(supplier_location)
-                            db.session.commit()
-                        
-                        # Create an inventory loss location if it doesn't exist
-                        inventory_loss_location = StockLocation.query.filter_by(location_type='inventory_loss').first()
-                        if not inventory_loss_location:
-                            inventory_loss_location = StockLocation(
-                                name='Inventory Loss',
-                                location_type='inventory_loss'
-                            )
-                            db.session.add(inventory_loss_location)
-                            db.session.commit()
-                        
-                        # Determine if we need to add or remove stock
-                        if target_quantity > current_quantity:
-                            # Add stock: from supplier to stock location
-                            quantity_to_move = target_quantity - current_quantity
-                            source_location = supplier_location
-                            destination_location = stock_location
-                        else:
-                            # Remove stock: from stock location to inventory loss
-                            quantity_to_move = current_quantity - target_quantity
-                            source_location = stock_location
-                            destination_location = inventory_loss_location
-                        
-                        # Create the stock move
-                        stock_move = StockMove(
-                            product_id=product.id,
-                            source_location_id=source_location.id,
-                            destination_location_id=destination_location.id,
-                            quantity=quantity_to_move,
-                            state='done',
-                            reference=f"Stock adjustment from import",
-                            reference_type='import',
-                            effective_date=datetime.utcnow()
+                    try:
+                        new_product = Product(
+                            name=str(row['name']).strip(),
+                            sku=str(row['sku']).strip(),
+                            uom_id=uom_id
                         )
-                        db.session.add(stock_move)
-                        db.session.commit()
-            
+                        
+                        # Set optional fields if they exist in the data
+                        if category_id:
+                            new_product.category_id = category_id
+                        if 'cost_price' in df.columns and not pd.isna(row['cost_price']):
+                            new_product.cost_price = float(row['cost_price'])
+                        if 'sale_price' in df.columns and not pd.isna(row['sale_price']):
+                            new_product.sale_price = float(row['sale_price'])
+                        if 'description' in df.columns and not pd.isna(row['description']):
+                            new_product.description = str(row['description']).strip()
+                        if 'barcode' in df.columns and not pd.isna(row['barcode']):
+                            new_product.barcode = str(row['barcode']).strip()
+                        if 'min_stock' in df.columns and not pd.isna(row['min_stock']):
+                            new_product.min_stock = float(row['min_stock'])
+                        if 'max_stock' in df.columns and not pd.isna(row['max_stock']):
+                            new_product.max_stock = float(row['max_stock'])
+                        if 'weight' in df.columns and not pd.isna(row['weight']):
+                            new_product.weight = float(row['weight'])
+                        if 'volume' in df.columns and not pd.isna(row['volume']):
+                            new_product.volume = float(row['volume'])
+                        if 'is_active' in df.columns and not pd.isna(row['is_active']):
+                            new_product.is_active = bool(row['is_active'])
+                        
+                        db.session.add(new_product)
+                        db.session.flush()  # Use flush instead of commit
+                        product = new_product
+                        products_created += 1
+                    except Exception as e:
+                        db.session.rollback()
+                        errors.append(f"Row {index+1}: Error creating product {row['sku']} - {str(e)}")
+                        continue
+                
+                # Commit the transaction for this row
+                db.session.commit()
+                
             except Exception as e:
-                errors.append(f"Error on row {index + 2}: {str(e)}")
+                db.session.rollback()
+                errors.append(f"Row {index+1}: Unexpected error - {str(e)}")
+                continue
         
-        # Commit all changes
-        db.session.commit()
-        
-        # Flash messages
-        if products_created > 0:
-            flash(f'Successfully created {products_created} products', 'success')
-        if products_updated > 0:
-            flash(f'Successfully updated {products_updated} products', 'success')
+        # Prepare result message
+        result_message = f"Import completed: {products_created} products created, {products_updated} products updated"
         if warehouses_created > 0:
-            flash(f'Created {warehouses_created} new warehouses', 'success')
+            result_message += f", {warehouses_created} warehouses created"
         if categories_created > 0:
-            flash(f'Created {categories_created} new categories', 'success')
+            result_message += f", {categories_created} categories created"
+        
         if errors:
-            for error in errors[:5]:  # Show only first 5 errors
-                flash(error, 'warning')
-            if len(errors) > 5:
-                flash(f'...and {len(errors) - 5} more errors', 'warning')
+            error_message = "<br>".join(errors[:10])
+            if len(errors) > 10:
+                error_message += f"<br>...and {len(errors) - 10} more errors"
+            flash(f"{result_message}<br><br>Errors encountered:<br>{error_message}", 'warning')
+        else:
+            flash(result_message, 'success')
         
         return redirect(url_for('inventory.products'))
-    
+        
     except Exception as e:
-        flash(f'Error processing file: {str(e)}', 'danger')
+        db.session.rollback()
+        flash(f'Error processing import: {str(e)}', 'danger')
         return redirect(url_for('inventory.import_export'))
 
 @inventory.route('/export-products')

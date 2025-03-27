@@ -1,5 +1,6 @@
 import os
 import sys
+import logging
 from datetime import datetime, date, timedelta
 import bcrypt
 from app import create_app, db
@@ -10,16 +11,52 @@ from modules.pos.models import POSSession, POSCashRegister, POSOrder, POSOrderLi
 from modules.purchase.models import Supplier, PurchaseOrder, PurchaseOrderLine, PurchaseReceipt, PurchaseReceiptLine, PurchaseInvoice, PurchaseInvoiceLine, PurchasePayment
 from modules.employees.models import Department, JobPosition, Employee, LeaveType, LeaveAllocation, Attendance
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 def init_db():
-    app = create_app('development')
-    with app.app_context():
-        # Create all tables
+    # Determine the configuration to use
+    if os.environ.get('PYTHONANYWHERE') == 'true':
+        config = 'production'
+        logger.info("Initializing database for PythonAnywhere deployment")
+    elif os.environ.get('RENDER') == 'true':
+        config = 'production'
+        logger.info("Initializing database for Render deployment")
+    else:
+        config = os.getenv('FLASK_CONFIG', 'development')
+        logger.info(f"Initializing database with {config} configuration")
+    
+    # Check if we're already in an app context
+    try:
+        from flask import current_app
+        app = current_app
+        logger.info("Using existing Flask application context")
+    except RuntimeError:
+        # Create a new app context if one doesn't exist
+        logger.info(f"Creating new Flask application with {config} config")
+        app = create_app(config)
+        app_context = app.app_context()
+        app_context.push()
+    
+    try:
+        # Check if database is already initialized
+        user_exists = False
+        try:
+            user_exists = User.query.first() is not None
+        except Exception as e:
+            logger.warning(f"Error checking if users exist: {str(e)}")
+            # Tables might not exist yet, which is fine
+            pass
+            
+        if user_exists:
+            logger.info("Database already initialized!")
+            return
+        
+        logger.info("Creating database tables...")
         db.create_all()
         
-        # Check if database is already initialized
-        if User.query.first() is not None:
-            print("Database already initialized!")
-            return
+        logger.info("Creating initial data...")
         
         # Create roles
         admin_role = Role(name='Admin', description='Administrator with full access')
@@ -325,7 +362,12 @@ def init_db():
         # Commit all changes
         db.session.commit()
         
-        print("Database initialized successfully!")
+        logger.info("Database initialized successfully!")
+
+    except Exception as e:
+        logger.error(f"Error initializing database: {str(e)}")
+        db.session.rollback()
+        raise
 
 if __name__ == '__main__':
     init_db()
