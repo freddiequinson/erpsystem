@@ -1,10 +1,13 @@
 {% extends 'base.html' %}
 
-{% block title %}POS Terminal{% endblock %}
+{% block head %}
+<!-- Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
-{% block styles %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/pos_unified.css') }}">
+<!-- Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+<!-- Custom CSS -->
 <style>
     /* Main layout styles */
     body {
@@ -14,43 +17,117 @@
         padding: 0;
     }
     
-    /* Exchange banner styles */
-    .exchange-banner {
-        background-color: #e6f7ff;
-        border-left: 4px solid #1890ff;
-        padding: 10px 15px;
-        margin-bottom: 15px;
+    .pos-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+    }
+    
+    .pos-header {
+        background-color: #fff;
+        padding: 1rem;
+        border-bottom: 1px solid #dee2e6;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        border-radius: 4px;
     }
     
-    .exchange-info {
-        font-weight: 500;
-        color: #0d6efd;
+    .pos-main {
+        flex: 1;
+        display: flex;
+        padding: 1rem;
+        gap: 1rem;
+        overflow: hidden;
     }
     
-    .exchange-amount {
-        font-weight: bold;
-        color: #0d6efd;
-        font-size: 1.1em;
+    .pos-products {
+        flex: 2;
+        background-color: #fff;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        overflow-y: auto;
+    }
+    
+    .pos-cart {
+        flex: 1;
+        background-color: #fff;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        min-width: 350px;
+    }
+    
+    /* Customer Section Styles */
+    .customer-section {
+        background-color: #fff;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        border: 1px solid #e9ecef;
+    }
+    
+    .customer-section h5 {
+        color: #495057;
+        font-size: 1rem;
+        font-weight: 600;
+    }
+    
+    #selected-customer-info {
+        background-color: #f8f9fa;
+        padding: 0.75rem;
+        border-radius: 0.25rem;
+        margin-top: 0.75rem !important;
+    }
+    
+    #selected-customer-info span {
+        margin-right: 1rem;
+        color: #6c757d;
+    }
+    
+    .select2-container {
+        width: 100% !important;
+    }
+    
+    .select2-selection {
+        height: 38px !important;
+        padding: 0.375rem 0.75rem;
+        font-size: 1rem;
+        border: 1px solid #ced4da !important;
+        border-radius: 0.25rem !important;
+        background-color: #fff !important;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+    
+    .select2-selection:focus {
+        border-color: #86b7fe !important;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+    }
+    
+    .select2-selection__arrow {
+        height: 36px !important;
+    }
+    
+    .select2-selection__rendered {
+        line-height: 24px !important;
+        color: #212529 !important;
+    }
+    
+    .select2-container--default .select2-results__option--highlighted[aria-selected] {
+        background-color: #0d6efd !important;
+        color: #fff !important;
+    }
+    
+    .select2-dropdown {
+        border-color: #ced4da !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
     }
 </style>
 {% endblock %}
 
-{% block body_class %}pos-body{% endblock %}
-
 {% block content %}
-<!-- Hidden element to store server data -->
-<div id="server-data" 
-     data-currency="{{ currency }}"
-     data-exchange-return-id="{% if exchange_return %}{{ exchange_return.id }}{% else %}{% endif %}"
-     data-exchange-return-amount="{% if exchange_return %}{{ exchange_return.total_amount }}{% else %}0{% endif %}"
-     data-exchange-customer-name="{% if exchange_return and exchange_return.customer_name %}{{ exchange_return.customer_name }}{% else %}{% endif %}"
-     data-exchange-customer-phone="{% if exchange_return and exchange_return.customer_phone %}{{ exchange_return.customer_phone }}{% else %}{% endif %}"
-     style="display: none;"></div>
-
+<!-- Main Content -->
 <div class="pos-container">
     <!-- Header -->
     <div class="pos-header">
@@ -62,12 +139,9 @@
             <span class="ms-3">User: {{ current_user.username }}</span>
         </div>
         <div class="controls">
-            <a href="{{ url_for('pos.index') }}" class="btn">
-                <i class="fas fa-home"></i>
+            <a href="{{ url_for('pos.index') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-home"></i> Dashboard
             </a>
-            <button class="btn" id="customer-button">
-                <i class="fas fa-user"></i>
-            </button>
         </div>
     </div>
     
@@ -76,107 +150,94 @@
         <!-- Products Section -->
         <div class="pos-products">
             <!-- Search Bar -->
-            <div class="search-bar">
-                <input type="text" id="search-products" placeholder="Search products...">
+            <div class="search-bar mb-3">
+                <input type="text" class="form-control" id="search-products" placeholder="Search products...">
             </div>
             
             <!-- Category Tabs -->
-            <div class="category-tabs">
-                <button class="category-tab active" data-category="all">All Products</button>
+            <div class="category-tabs mb-3">
+                <button class="btn btn-outline-primary me-2 active" data-category="all">All Products</button>
                 {% for category in categories %}
-                <button class="category-tab" data-category="{{ category.id }}">
-                    {{ category.name }}
-                </button>
+                <button class="btn btn-outline-primary me-2" data-category="{{ category.id }}">{{ category.name }}</button>
                 {% endfor %}
             </div>
             
             <!-- Products Grid -->
             <div class="product-grid" id="products-container">
-                {% if products and products|length > 0 %}
-                    {% for product in products %}
-                    <div class="product-card {% if product.available_quantity <= 0 %}out-of-stock{% endif %}" 
-                         data-id="{{ product.id }}" 
-                         data-name="{{ product.name }}" 
-                         data-price="{{ product.sale_price }}"
-                         data-stock="{{ product.available_quantity }}"
-                         data-category="{{ product.category.id if product.category else 'none' }}">
-                        <div class="product-image">
-                            <i class="fas fa-box"></i>
-                        </div>
-                        <div class="product-info">
-                            <div class="product-name">{{ product.name }}</div>
-                            <div class="product-price">{{ currency }}{{ product.sale_price }}</div>
-                            <div class="product-stock">Stock: {{ product.available_quantity }}</div>
-                        </div>
+                {% for product in products %}
+                <div class="product-card" data-id="{{ product.id }}" data-name="{{ product.name }}" data-price="{{ product.sale_price }}">
+                    <div class="product-info">
+                        <h5>{{ product.name }}</h5>
+                        <p class="price">{{ currency }}{{ product.sale_price }}</p>
+                        <p class="stock">Stock: {{ product.available_quantity }}</p>
                     </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="no-products-message">
-                        <p>No products available. Please add products to your inventory.</p>
-                    </div>
-                {% endif %}
+                </div>
+                {% endfor %}
             </div>
         </div>
         
         <!-- Cart Section -->
         <div class="pos-cart">
-            {% if exchange_return %}
-            <div class="exchange-banner">
-                <div class="exchange-info">
-                    <i class="fas fa-exchange-alt me-2"></i> Exchange for Return #{{ exchange_return.name }}
+            <!-- Customer Selection Section -->
+            <div class="customer-section mb-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Customer</h5>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="showNewCustomerModal()">
+                        <i class="fas fa-plus"></i> New Customer
+                    </button>
                 </div>
-                <div class="exchange-amount">{{ currency }}{{ "%.2f"|format(exchange_return.total_amount) }}</div>
-            </div>
-            {% endif %}
-            
-            <!-- Cart Header -->
-            <div class="cart-header">
-                <h5>Current Order</h5>
-                <button class="btn" id="clear-cart">
-                    <i class="fas fa-trash"></i>
-                </button>
+                <div class="mt-2">
+                    <select id="customer-select" class="form-select">
+                        <option value="" selected>Walk-in Customer</option>
+                    </select>
+                </div>
+                <div id="selected-customer-info" class="mt-2 small d-none">
+                    <div class="text-muted">
+                        <span id="customer-phone"></span>
+                        <span id="customer-email"></span>
+                    </div>
+                </div>
             </div>
             
             <!-- Cart Items -->
-            <div class="cart-items" id="cart-items">
-                <div class="text-center py-5 text-muted" id="empty-cart-message">
-                    <i class="fas fa-shopping-cart fa-3x mb-3"></i>
-                    <p>Your cart is empty</p>
-                </div>
-                <!-- Cart items will be added here dynamically -->
+            <div class="cart-items flex-grow-1">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Qty</th>
+                            <th>Price</th>
+                            <th>Total</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="cart-items">
+                    </tbody>
+                </table>
             </div>
             
             <!-- Cart Summary -->
-            <div class="cart-summary">
-                <div class="cart-total-row">
-                    <div class="cart-total-label">Subtotal:</div>
-                    <div class="cart-total-value" id="subtotal">{{ currency }}0.00</div>
+            <div class="cart-summary mt-auto">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Subtotal:</span>
+                    <span id="subtotal">{{ currency }}0.00</span>
                 </div>
-                <div class="cart-total-row">
-                    <div class="cart-total-label">Tax (10%):</div>
-                    <div class="cart-total-value" id="tax">{{ currency }}0.00</div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Tax (10%):</span>
+                    <span id="tax">{{ currency }}0.00</span>
                 </div>
-                {% if exchange_return %}
-                <div class="cart-total-row" style="margin-top: 5px; padding-top: 5px; border-top: 1px dashed #ddd;">
-                    <div class="cart-total-label">Order Total:</div>
-                    <div class="cart-total-value" id="order-total">{{ currency }}0.00</div>
-                </div>
-                <div class="cart-total-row" style="color: #0d6efd;">
-                    <div class="cart-total-label">Exchange Credit:</div>
-                    <div class="cart-total-value" id="exchange-credit">-{{ currency }}{{ "%.2f"|format(exchange_return.total_amount) }}</div>
-                </div>
-                {% endif %}
-                <div class="cart-total-row" style="font-weight: bold; font-size: 1.1em; margin-top: 5px;">
-                    <div class="cart-total-label">Total Due:</div>
-                    <div class="cart-total-value" id="total">{{ currency }}0.00</div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="fw-bold">Total:</span>
+                    <span id="total" class="fw-bold">{{ currency }}0.00</span>
                 </div>
                 
-                <div class="cart-actions">
-                    <button class="btn-clear" id="clear-cart-btn">
-                        <i class="fas fa-trash me-2"></i> Clear
+                <!-- Cart Actions -->
+                <div class="cart-actions mt-3">
+                    <button class="btn btn-danger w-100 mb-2" onclick="clearCart()">
+                        <i class="fas fa-trash-alt"></i> Clear
                     </button>
-                    <button class="btn-checkout" id="checkout-btn">
-                        <i class="fas fa-money-bill-wave me-2"></i> Pay
+                    <button class="btn btn-primary w-100" onclick="showPaymentModal()" id="checkout-btn" disabled>
+                        <i class="fas fa-shopping-cart"></i> Checkout
                     </button>
                 </div>
             </div>
@@ -184,176 +245,37 @@
     </div>
 </div>
 
-<!-- Payment Modal -->
-<div class="modal fade" id="payment-modal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+<!-- New Customer Modal -->
+<div class="modal fade" id="new-customer-modal" tabindex="-1">
+    <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="paymentModalLabel">Complete Payment</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title">New Customer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-7">
-                        <div class="payment-details">
-                            <h6>Order Summary</h6>
-                            <div class="order-summary">
-                                <div class="summary-row">
-                                    <div class="summary-label">Items:</div>
-                                    <div class="summary-value" id="payment-items-count">0</div>
-                                </div>
-                                <div class="summary-row">
-                                    <div class="summary-label">Subtotal:</div>
-                                    <div class="summary-value" id="payment-subtotal">{{ currency }}0.00</div>
-                                </div>
-                                <div class="summary-row">
-                                    <div class="summary-label">Tax (10%):</div>
-                                    <div class="summary-value" id="payment-tax">{{ currency }}0.00</div>
-                                </div>
-                                <div class="summary-row total-row">
-                                    <div class="summary-label">Total:</div>
-                                    <div class="summary-value" id="payment-total">{{ currency }}0.00</div>
-                                </div>
-                            </div>
-                            
-                            <h6 class="mt-4">Payment Method</h6>
-                            <div class="payment-methods-container">
-                                <div class="row">
-                                    {% for method in payment_methods %}
-                                    <div class="col-md-4 mb-3">
-                                        <div class="payment-method-card {% if loop.first %}active{% endif %}" data-method="{{ method.code }}">
-                                            <div class="payment-method-icon">
-                                                {% if method.code == 'cash' %}
-                                                <i class="fas fa-money-bill-wave"></i>
-                                                {% elif method.code == 'card' %}
-                                                <i class="fas fa-credit-card"></i>
-                                                {% elif method.code == 'momo' %}
-                                                <i class="fas fa-mobile-alt"></i>
-                                                {% else %}
-                                                <i class="fas fa-wallet"></i>
-                                                {% endif %}
-                                            </div>
-                                            <div class="payment-method-name">{{ method.name }}</div>
-                                        </div>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </div>
+                <form id="new-customer-form">
+                    <div class="mb-3">
+                        <label for="customer-name" class="form-label">Name *</label>
+                        <input type="text" class="form-control" id="customer-name" required>
                     </div>
-                    <div class="col-md-5">
-                        <div class="payment-forms">
-                            <!-- Cash Payment Form -->
-                            <div class="payment-form" id="cash-form">
-                                <div class="form-group mb-3">
-                                    <label for="amount-tendered">Amount Tendered</label>
-                                    <input type="text" class="form-control" id="amount-tendered" value="0.00">
-                                </div>
-                                <div class="form-group mb-3">
-                                    <label for="change">Change</label>
-                                    <div class="form-control" id="change" readonly>0.00</div>
-                                </div>
-                                
-                                <div class="numpad">
-                                    <div class="numpad-row">
-                                        <button class="numpad-key" data-key="7">7</button>
-                                        <button class="numpad-key" data-key="8">8</button>
-                                        <button class="numpad-key" data-key="9">9</button>
-                                    </div>
-                                    <div class="numpad-row">
-                                        <button class="numpad-key" data-key="4">4</button>
-                                        <button class="numpad-key" data-key="5">5</button>
-                                        <button class="numpad-key" data-key="6">6</button>
-                                    </div>
-                                    <div class="numpad-row">
-                                        <button class="numpad-key" data-key="1">1</button>
-                                        <button class="numpad-key" data-key="2">2</button>
-                                        <button class="numpad-key" data-key="3">3</button>
-                                    </div>
-                                    <div class="numpad-row">
-                                        <button class="numpad-key" data-key="0">0</button>
-                                        <button class="numpad-key" data-key=".">.</button>
-                                        <button class="numpad-key" data-key="C">C</button>
-                                    </div>
-                                    <div class="numpad-row">
-                                        <button class="numpad-key" data-key="+10">+10</button>
-                                        <button class="numpad-key" data-key="+20">+20</button>
-                                        <button class="numpad-key" data-key="+50">+50</button>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Card Payment Form -->
-                            <div class="payment-form" id="card-form" style="display: none;">
-                                <div class="form-group mb-3">
-                                    <label for="card-number">Card Number</label>
-                                    <input type="text" class="form-control" id="card-number" placeholder="XXXX XXXX XXXX XXXX">
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group mb-3">
-                                            <label for="expiry-date">Expiry Date</label>
-                                            <input type="text" class="form-control" id="expiry-date" placeholder="MM/YY">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group mb-3">
-                                            <label for="cvv">CVV</label>
-                                            <input type="text" class="form-control" id="cvv" placeholder="XXX">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Mobile Money Form -->
-                            <div class="payment-form" id="momo-form" style="display: none;">
-                                <div class="form-group mb-3">
-                                    <label for="phone-number">Phone Number</label>
-                                    <input type="text" class="form-control" id="phone-number" placeholder="e.g. 0201234567">
-                                </div>
-                                <div class="form-group mb-3">
-                                    <label for="network">Network</label>
-                                    <select class="form-control" id="network">
-                                        <option value="mtn">MTN Mobile Money</option>
-                                        <option value="vodafone">Vodafone Cash</option>
-                                        <option value="airteltigo">AirtelTigo Money</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="mb-3">
+                        <label for="customer-phone" class="form-label">Phone</label>
+                        <input type="tel" class="form-control" id="customer-phone-input">
                     </div>
-                </div>
+                    <div class="mb-3">
+                        <label for="customer-email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="customer-email-input">
+                    </div>
+                    <div class="mb-3">
+                        <label for="customer-notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="customer-notes" rows="2"></textarea>
+                    </div>
+                </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="complete-payment">Complete Payment</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Customer Modal -->
-<div class="modal fade" id="customerModal" tabindex="-1" aria-labelledby="customerModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="customerModalLabel">Select Customer</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <input type="text" class="form-control" id="customer-search" placeholder="Search customers...">
-                </div>
-                <div class="list-group" id="customer-list">
-                    <a href="#" class="list-group-item list-group-item-action active" data-id="">Walk-in Customer</a>
-                    {% for customer in customers %}
-                    <a href="#" class="list-group-item list-group-item-action" data-id="{{ customer.id }}">{{ customer.name }}</a>
-                    {% endfor %}
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="select-customer" data-bs-dismiss="modal">Select</button>
+                <button type="button" class="btn btn-primary" onclick="createNewCustomer()">Save</button>
             </div>
         </div>
     </div>
@@ -361,855 +283,125 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<!-- Bootstrap Bundle with Popper -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
-    // Get server data from hidden HTML element
-    const serverDataElement = document.getElementById('server-data');
-    const serverData = {
-        currency: serverDataElement.dataset.currency || "GH₵",
-        exchangeReturn: {
-            id: serverDataElement.dataset.exchangeReturnId ? parseInt(serverDataElement.dataset.exchangeReturnId) : null,
-            amount: parseFloat(serverDataElement.dataset.exchangeReturnAmount || 0),
-            customerName: serverDataElement.dataset.exchangeCustomerName || null,
-            customerPhone: serverDataElement.dataset.exchangeCustomerPhone || null
-        }
-    };
-    
-    // Wait for DOM to be fully loaded
-    document.addEventListener('DOMContentLoaded', function() {
-        // Cart state
-        let cart = [];
-        let selectedPaymentMethod = 'cash';
-        let selectedCustomer = null;
-        let exchangeReturnAmount = parseFloat(serverData.exchangeReturn.amount) || 0;
-        
-        // Initialize exchange return data if available
-        if (serverData.exchangeReturn.id) {
-            // Set the customer information if available
-            if (serverData.exchangeReturn.customerName) {
-                selectedCustomer = {
-                    id: "exchange_customer",
-                    name: serverData.exchangeReturn.customerName,
-                    phone: serverData.exchangeReturn.customerPhone
-                };
-                
-                // Update the customer display
-                document.getElementById('customer-button').innerHTML = '<i class="fas fa-user me-1"></i> ' + serverData.exchangeReturn.customerName;
-            }
-        }
-        
-        // DOM Elements
-        const productSearch = document.getElementById('search-products');
-        const productCards = document.querySelectorAll('.product-card');
-        const categoryTabs = document.querySelectorAll('.category-tab');
-        const cartItems = document.getElementById('cart-items');
-        const emptyCartMessage = document.getElementById('empty-cart-message');
-        const subtotalElement = document.getElementById('subtotal');
-        const taxElement = document.getElementById('tax');
-        const totalElement = document.getElementById('total');
-        const checkoutBtn = document.getElementById('checkout-btn');
-        const clearCartBtn = document.getElementById('clear-cart-btn');
-        const paymentModal = new bootstrap.Modal(document.getElementById('payment-modal'));
-        const customerModal = new bootstrap.Modal(document.getElementById('customerModal'));
-        const paymentMethods = document.querySelectorAll('.payment-method-card');
-        const paymentForms = document.querySelectorAll('.payment-form');
-        const amountTendered = document.getElementById('amount-tendered');
-        const changeAmount = document.getElementById('change');
-        const completePaymentButton = document.getElementById('complete-payment');
-        const customerButton = document.getElementById('customer-button');
-        const customerList = document.querySelectorAll('#customer-list a');
-        const selectCustomerButton = document.getElementById('select-customer');
-        const numpadKeys = document.querySelectorAll('.numpad-key');
-        
-        // Search products
-        productSearch.addEventListener('input', function() {
-            const searchTerm = this.value.toLowerCase();
-            
-            productCards.forEach(card => {
-                const productName = card.getAttribute('data-name').toLowerCase();
-                
-                if (productName.includes(searchTerm)) {
-                    card.style.display = 'flex';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-        });
-        
-        // Filter products by category
-        categoryTabs.forEach(tab => {
-            tab.addEventListener('click', function() {
-                const category = this.getAttribute('data-category');
-                
-                // Update active tab
-                categoryTabs.forEach(t => t.classList.remove('active'));
-                this.classList.add('active');
-                
-                // Filter products
-                productCards.forEach(card => {
-                    if (category === 'all' || card.getAttribute('data-category') === category) {
-                        card.style.display = 'flex';
-                    } else {
-                        card.style.display = 'none';
-                    }
-                });
-            });
-        });
-        
-        // Add product to cart
-        productCards.forEach(card => {
-            card.addEventListener('click', function() {
-                const productId = parseInt(this.getAttribute('data-id'));
-                const productName = this.getAttribute('data-name');
-                const productPrice = parseFloat(this.getAttribute('data-price'));
-                const productStock = parseInt(this.getAttribute('data-stock'));
-                
-                // Check if product is in stock
-                if (productStock <= 0) {
-                    alert('This product is out of stock.');
-                    return;
-                }
-                
-                // Check if product is already in cart
-                const existingProduct = cart.find(item => item.id === productId);
-                
-                if (existingProduct) {
-                    // Check if adding more would exceed stock
-                    if (existingProduct.quantity >= productStock) {
-                        alert('Cannot add more of this product. Stock limit reached.');
-                        return;
-                    }
-                    
-                    existingProduct.quantity += 1;
-                } else {
-                    cart.push({
-                        id: productId,
-                        name: productName,
-                        price: productPrice,
-                        quantity: 1
-                    });
-                }
-                
-                updateCartUI();
-            });
-        });
-        
-        // Clear cart
-        clearCartBtn.addEventListener('click', function() {
-            if (cart.length > 0) {
-                if (confirm('Are you sure you want to clear the cart?')) {
-                    cart = [];
-                    updateCartUI();
-                }
-            }
-        });
-        
-        // Checkout
-        checkoutBtn.addEventListener('click', function() {
-            if (cart.length === 0) {
-                alert('Your cart is empty.');
-                return;
-            }
-            
-            // Update payment modal with cart details
-            document.getElementById('payment-items-count').textContent = cart.length;
-            document.getElementById('payment-subtotal').textContent = `${serverData.currency}${calculateSubtotal().toFixed(2)}`;
-            document.getElementById('payment-tax').textContent = `${serverData.currency}${calculateTax().toFixed(2)}`;
-            document.getElementById('payment-total').textContent = `${serverData.currency}${calculateFinalAmount().toFixed(2)}`;
-            
-            // Set default amount tendered to the total amount
-            amountTendered.value = calculateFinalAmount().toFixed(2);
-            updateChange();
-            
-            // Show payment modal
-            paymentModal.show();
-        });
-        
-        // Switch payment methods
-        paymentMethods.forEach(method => {
-            method.addEventListener('click', function() {
-                const methodType = this.getAttribute('data-method');
-                
-                // Update active method
-                paymentMethods.forEach(m => m.classList.remove('active'));
-                this.classList.add('active');
-                
-                // Show corresponding form
-                paymentForms.forEach(form => {
-                    if (form.id === `${methodType}-form`) {
-                        form.style.display = 'block';
-                    } else {
-                        form.style.display = 'none';
-                    }
-                });
-                
-                selectedPaymentMethod = methodType;
-            });
-        });
-        
-        // Numpad functionality
-        numpadKeys.forEach(key => {
-            key.addEventListener('click', function() {
-                const keyValue = this.getAttribute('data-key');
-                let currentAmount = parseFloat(amountTendered.value) || 0;
-                
-                if (keyValue === 'C') {
-                    // Clear
-                    amountTendered.value = '0.00';
-                } else if (keyValue === '.') {
-                    // Decimal point
-                    if (!amountTendered.value.includes('.')) {
-                        amountTendered.value = amountTendered.value + '.';
-                    }
-                } else if (keyValue.startsWith('+')) {
-                    // Add preset amount
-                    const addAmount = parseInt(keyValue.substring(1));
-                    currentAmount += addAmount;
-                    amountTendered.value = currentAmount.toFixed(2);
-                } else {
-                    // Add digit
-                    if (amountTendered.value === '0.00' || amountTendered.value === '0') {
-                        amountTendered.value = keyValue;
-                    } else {
-                        amountTendered.value = amountTendered.value + keyValue;
-                    }
-                }
-                
-                updateChange();
-            });
-        });
-        
-        // Update change when amount tendered changes
-        amountTendered.addEventListener('input', updateChange);
-        
-        function updateChange() {
-            const amountDue = calculateFinalAmount();
-            const tendered = parseFloat(amountTendered.value) || 0;
-            const change = Math.max(0, tendered - amountDue);
-            
-            changeAmount.textContent = `${serverData.currency}${change.toFixed(2)}`;
-            
-            // If this is an exchange, show additional information about the exchange balance
-            if (serverData.exchangeReturn.id && tendered >= 0) {
-                const totalOrderAmount = calculateSubtotal() + calculateTax();
-                const exchangeInfoContainer = document.getElementById('exchange-info-container');
-                
-                if (!exchangeInfoContainer) {
-                    // Create container for exchange info
-                    const infoContainer = document.createElement('div');
-                    infoContainer.id = 'exchange-info-container';
-                    infoContainer.className = 'mt-3';
-                    
-                    // Create exchange info content
-                    const infoContent = document.createElement('div');
-                    infoContent.id = 'exchange-info';
-                    infoContent.className = 'alert alert-info';
-                    
-                    // Determine the exchange situation
-                    if (totalOrderAmount > exchangeReturnAmount) {
-                        // Customer needs to pay additional amount
-                        const additionalPayment = amountDue;
-                        infoContent.innerHTML = `
-                            <p class="mb-2"><strong>Exchange Summary:</strong></p>
-                            <div class="d-flex justify-content-between mb-1">
-                                <span>New purchase:</span>
-                                <span>${serverData.currency}${totalOrderAmount.toFixed(2)}</span>
-                            </div>
-                            <div class="d-flex justify-content-between mb-1">
-                                <span>Return credit:</span>
-                                <span>${serverData.currency}${exchangeReturnAmount.toFixed(2)}</span>
-                            </div>
-                            <div class="d-flex justify-content-between mb-1">
-                                <span>Additional payment:</span>
-                                <span>${serverData.currency}${additionalPayment.toFixed(2)}</span>
-                            </div>
-                            <div class="d-flex justify-content-between">
-                                <span>Change to give:</span>
-                                <span>${serverData.currency}${change.toFixed(2)}</span>
-                            </div>
-                        `;
-                    } else {
-                        // Customer gets store credit or cash back for remaining balance
-                        const remainingCredit = exchangeReturnAmount - totalOrderAmount;
-                        const totalChange = remainingCredit + change;
-                        infoContent.innerHTML = `
-                            <p class="mb-2"><strong>Exchange Summary:</strong></p>
-                            <div class="d-flex justify-content-between mb-1">
-                                <span>New purchase:</span>
-                                <span>${serverData.currency}${totalOrderAmount.toFixed(2)}</span>
-                            </div>
-                            <div class="d-flex justify-content-between mb-1">
-                                <span>Return credit:</span>
-                                <span>${serverData.currency}${exchangeReturnAmount.toFixed(2)}</span>
-                            </div>
-                            <div class="d-flex justify-content-between mb-1">
-                                <span>Remaining credit:</span>
-                                <span>${serverData.currency}${remainingCredit.toFixed(2)}</span>
-                            </div>
-                            <div class="d-flex justify-content-between mb-1">
-                                <span>Payment change:</span>
-                                <span>${serverData.currency}${change.toFixed(2)}</span>
-                            </div>
-                            <div class="d-flex justify-content-between font-weight-bold" style="color: #198754; font-weight: bold; border-top: 1px dashed #ccc; padding-top: 8px; margin-top: 8px;">
-                                <span>Total change to give:</span>
-                                <span>${serverData.currency}${totalChange.toFixed(2)}</span>
-                            </div>
-                            <div class="mt-2 small text-muted">
-                                <i class="fas fa-info-circle me-1"></i> The remaining credit will be automatically converted to change upon payment completion.
-                            </div>
-                        `;
-                    }
-                    
-                    infoContainer.appendChild(infoContent);
-                    
-                    // Add to the payment form
-                    const paymentFormContainer = document.querySelector('.payment-form:not([style*="display: none"])');
-                    if (paymentFormContainer) {
-                        paymentFormContainer.appendChild(infoContainer);
-                    }
-                } else {
-                    // Update existing exchange info
-                    const infoContent = document.getElementById('exchange-info');
-                    
-                    if (infoContent) {
-                        if (totalOrderAmount > exchangeReturnAmount) {
-                            // Customer needs to pay additional amount
-                            const additionalPayment = amountDue;
-                            infoContent.innerHTML = `
-                                <p class="mb-2"><strong>Exchange Summary:</strong></p>
-                                <div class="d-flex justify-content-between mb-1">
-                                    <span>New purchase:</span>
-                                    <span>${serverData.currency}${totalOrderAmount.toFixed(2)}</span>
-                                </div>
-                                <div class="d-flex justify-content-between mb-1">
-                                    <span>Return credit:</span>
-                                    <span>${serverData.currency}${exchangeReturnAmount.toFixed(2)}</span>
-                                </div>
-                                <div class="d-flex justify-content-between mb-1">
-                                    <span>Additional payment:</span>
-                                    <span>${serverData.currency}${additionalPayment.toFixed(2)}</span>
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <span>Change to give:</span>
-                                    <span>${serverData.currency}${change.toFixed(2)}</span>
-                                </div>
-                            `;
-                        } else {
-                            // Customer gets store credit or cash back for remaining balance
-                            const remainingCredit = exchangeReturnAmount - totalOrderAmount;
-                            const totalChange = remainingCredit + change;
-                            infoContent.innerHTML = `
-                                <p class="mb-2"><strong>Exchange Summary:</strong></p>
-                                <div class="d-flex justify-content-between mb-1">
-                                    <span>New purchase:</span>
-                                    <span>${serverData.currency}${totalOrderAmount.toFixed(2)}</span>
-                                </div>
-                                <div class="d-flex justify-content-between mb-1">
-                                    <span>Return credit:</span>
-                                    <span>${serverData.currency}${exchangeReturnAmount.toFixed(2)}</span>
-                                </div>
-                                <div class="d-flex justify-content-between mb-1">
-                                    <span>Remaining credit:</span>
-                                    <span>${serverData.currency}${remainingCredit.toFixed(2)}</span>
-                                </div>
-                                <div class="d-flex justify-content-between mb-1">
-                                    <span>Payment change:</span>
-                                    <span>${serverData.currency}${change.toFixed(2)}</span>
-                                </div>
-                                <div class="d-flex justify-content-between font-weight-bold" style="color: #198754; font-weight: bold; border-top: 1px dashed #ccc; padding-top: 8px; margin-top: 8px;">
-                                    <span>Total change to give:</span>
-                                    <span>${serverData.currency}${totalChange.toFixed(2)}</span>
-                                </div>
-                                <div class="mt-2 small text-muted">
-                                    <i class="fas fa-info-circle me-1"></i> The remaining credit will be automatically converted to change upon payment completion.
-                                </div>
-                            `;
-                        }
-                    }
-                }
-            }
-        }
-        
-        // Complete payment
-        completePaymentButton.addEventListener('click', function() {
-            if (selectedPaymentMethod === 'cash') {
-                const tendered = parseFloat(amountTendered.value) || 0;
-                const total = calculateFinalAmount();
-                
-                if (tendered < total) {
-                    alert('Amount tendered must be greater than or equal to the total amount.');
-                    return;
-                }
-            }
-            
-            // Create order data
-            const orderData = {
-                items: cart.map(item => ({
-                    product_id: item.id,
-                    quantity: item.quantity,
-                    price: item.price
-                })),
-                payment_method: selectedPaymentMethod,
-                amount_tendered: parseFloat(amountTendered.value) || 0,
-                customer_id: selectedCustomer ? selectedCustomer.id : null,
-                customer_name: selectedCustomer ? selectedCustomer.name : null,
-                customer_phone: selectedCustomer ? selectedCustomer.phone : null
-            };
-            
-            // Add exchange return data if applicable
-            if (serverData.exchangeReturn.id) {
-                orderData.exchange_return_id = serverData.exchangeReturn.id;
-                orderData.exchange_amount = serverData.exchangeReturn.amount;
-            }
-            
-            // Send order to server
-            fetch('/pos/api/orders/create', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(orderData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Response data:', data);
-                if (data.success) {
-                    // Close payment modal
-                    paymentModal.hide();
-                    
-                    // Create receipt modal (hidden initially)
-                    const receiptModal = document.createElement('div');
-                    receiptModal.classList.add('modal', 'fade');
-                    receiptModal.id = 'receipt-modal';
-                    receiptModal.setAttribute('tabindex', '-1');
-                    receiptModal.setAttribute('aria-labelledby', 'receiptModalLabel');
-                    receiptModal.setAttribute('aria-hidden', 'true');
-                    
-                    receiptModal.innerHTML = `
-                        <div class="modal-dialog modal-dialog-centered">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="receiptModalLabel">Receipt</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body p-4">
-                                    <div style="font-family: 'Courier New', Courier, monospace; font-size: 12px; width: 80mm; margin: 0 auto; background-color: white;">
-                                        <div class="receipt" style="border: 1px dotted #ccc; padding: 5mm; background-color: white;">
-                                            <div class="header" style="text-align: center; margin-bottom: 5mm;">
-                                                <div class="company-name" style="font-size: 16px; font-weight: bold;">TYSONE ELECTRONICS</div>
-                                                <div>123 Main Street, Accra, Ghana</div>
-                                                <div>Tel: +233 123 456 789</div>
-                                            </div>
-                                            
-                                            <div class="info" style="margin-bottom: 3mm;">
-                                                <div style="display: flex; justify-content: space-between;"><span>Receipt:</span> <span>${data.order_id || ''}</span></div>
-                                                <div style="display: flex; justify-content: space-between;"><span>Date:</span> <span>${new Date().toLocaleString()}</span></div>
-                                                <div style="display: flex; justify-content: space-between;"><span>Cashier:</span> <span>${serverData.username || 'Cashier'}</span></div>
-                                                ${data.customer_name ? `<div style="display: flex; justify-content: space-between;"><span>Customer:</span> <span>${data.customer_name}</span></div>` : ''}
-                                            </div>
-                                            
-                                            <div class="divider" style="border-top: 1px dashed #000; margin: 3mm 0;"></div>
-                                            
-                                            <table class="items" style="width: 100%;">
-                                                <thead>
-                                                    <tr>
-                                                        <th style="text-align: left; border-bottom: 1px solid #000;">Item</th>
-                                                        <th style="text-align: center; width: 15%; border-bottom: 1px solid #000;">Qty</th>
-                                                        <th style="text-align: right; width: 25%; border-bottom: 1px solid #000;">Price</th>
-                                                        <th style="text-align: right; width: 25%; border-bottom: 1px solid #000;">Total</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    ${cart.map(item => `
-                                                        <tr>
-                                                            <td style="padding: 1mm 0;">${item.name}</td>
-                                                            <td style="text-align: center; padding: 1mm 0;">${item.quantity}</td>
-                                                            <td style="text-align: right; padding: 1mm 0;">₵${item.price.toFixed(2)}</td>
-                                                            <td style="text-align: right; padding: 1mm 0;">₵${(item.price * item.quantity).toFixed(2)}</td>
-                                                        </tr>
-                                                    `).join('')}
-                                                </tbody>
-                                            </table>
-                                            
-                                            <div class="divider" style="border-top: 1px dashed #000; margin: 3mm 0;"></div>
-                                            
-                                            <div class="totals" style="margin-top: 3mm;">
-                                                <div style="display: flex; justify-content: space-between;"><span>Subtotal:</span> <span>₵${calculateSubtotal().toFixed(2)}</span></div>
-                                                <div style="display: flex; justify-content: space-between;"><span>Tax (10%):</span> <span>₵${calculateTax().toFixed(2)}</span></div>
-                                                ${serverData.exchangeReturn.id ? `
-                                                <div style="display: flex; justify-content: space-between;"><span>Order Total:</span> <span>₵${(calculateSubtotal() + calculateTax()).toFixed(2)}</span></div>
-                                                <div style="display: flex; justify-content: space-between; color: #0d6efd;"><span>Exchange Credit:</span> <span>-₵${exchangeReturnAmount.toFixed(2)}</span></div>
-                                                ` : ''}
-                                                <div style="display: flex; justify-content: space-between; font-weight: bold;"><span>TOTAL DUE:</span> <span>₵${calculateFinalAmount().toFixed(2)}</span></div>
-                                                <div style="display: flex; justify-content: space-between;"><span>Payment Method:</span> <span>${data.payment_method ? data.payment_method.toUpperCase() : 'CASH'}</span></div>
-                                                ${serverData.exchangeReturn.id ? `
-                                                <div style="display: flex; justify-content: space-between;"><span>Exchange Return:</span> <span>#${serverData.exchangeReturn.name}</span></div>
-                                                ${(exchangeReturnAmount > (calculateSubtotal() + calculateTax())) ? `
-                                                <div style="display: flex; justify-content: space-between; margin-top: 3mm; padding-top: 3mm; border-top: 1px dashed #000;">
-                                                    <span>Remaining Credit:</span> 
-                                                    <span>₵${(exchangeReturnAmount - (calculateSubtotal() + calculateTax())).toFixed(2)}</span>
-                                                </div>
-                                                <div style="display: flex; justify-content: space-between;">
-                                                    <span>Payment Change:</span> 
-                                                    <span>₵${(Math.max(0, parseFloat(amountTendered.value || 0) - calculateFinalAmount())).toFixed(2)}</span>
-                                                </div>
-                                                <div style="display: flex; justify-content: space-between; font-weight: bold; color: #198754;">
-                                                    <span>TOTAL CHANGE:</span> 
-                                                    <span>₵${((exchangeReturnAmount - (calculateSubtotal() + calculateTax())) + Math.max(0, parseFloat(amountTendered.value || 0) - calculateFinalAmount())).toFixed(2)}</span>
-                                                </div>
-                                                <div style="font-size: 9px; margin-top: 2mm; font-style: italic; text-align: center;">
-                                                    Remaining credit has been converted to change
-                                                </div>
-                                                ` : ''}
-                                                ` : ''}
-                                            </div>
-                                            
-                                            <div class="divider" style="border-top: 1px dashed #000; margin: 3mm 0;"></div>
-                                            
-                                            <div class="footer" style="text-align: center; margin-top: 5mm; font-size: 10px;">
-                                                <div>Thank you for your purchase!</div>
-                                                <div>Powered by Tysone POS System</div>
-                                                <div>${new Date().toLocaleString()}</div>
-                                            </div>
-                                            
-                                            <div class="barcode" style="text-align: center; margin-top: 5mm;">
-                                                *${data.order_id || ''}*
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                    <button type="button" class="btn btn-primary" id="print-this-receipt">Print</button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    
-                    document.body.appendChild(receiptModal);
-                    
-                    // Calculate total change if this is an exchange
-                    let totalChangeMessage = '';
-                    if (serverData.exchangeReturn.id) {
-                        const totalOrderAmount = calculateSubtotal() + calculateTax();
-                        if (exchangeReturnAmount > totalOrderAmount) {
-                            const remainingCredit = exchangeReturnAmount - totalOrderAmount;
-                            const paymentChange = Math.max(0, parseFloat(amountTendered.value || 0) - calculateFinalAmount());
-                            const totalChange = remainingCredit + paymentChange;
-                            
-                            totalChangeMessage = `
-                                <div class="alert alert-success mt-3 mb-3">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span><strong>Total Change:</strong></span>
-                                        <span class="fs-4">${serverData.currency}${totalChange.toFixed(2)}</span>
-                                    </div>
-                                    <div class="small text-muted mt-1">
-                                        <i class="fas fa-info-circle me-1"></i> Includes remaining credit (${serverData.currency}${remainingCredit.toFixed(2)}) converted to change
-                                    </div>
-                                </div>
-                            `;
-                        }
-                    }
-                    
-                    // Initialize and show success modal
-                    const successModal = document.createElement('div');
-                    successModal.classList.add('modal', 'fade');
-                    successModal.id = 'success-modal';
-                    successModal.setAttribute('tabindex', '-1');
-                    successModal.setAttribute('aria-labelledby', 'successModalLabel');
-                    successModal.setAttribute('aria-hidden', 'true');
-                    
-                    successModal.innerHTML = `
-                        <div class="modal-dialog modal-dialog-centered">
-                            <div class="modal-content">
-                                <div class="modal-body p-4 text-center">
-                                    <div class="mb-4 text-success">
-                                        <i class="fas fa-check-circle fa-4x"></i>
-                                    </div>
-                                    <h4 class="modal-title text-success mb-3" id="successModalLabel">Payment Successful</h4>
-                                    <p class="mb-4">₵${calculateFinalAmount().toFixed(2)}</p>
-                                    
-                                    ${totalChangeMessage}
-                                    
-                                    <div class="d-grid gap-2">
-                                        <button id="view-receipt-btn" class="btn btn-outline-primary d-flex justify-content-between align-items-center">
-                                            <span>View Receipt</span>
-                                            <i class="fas fa-receipt"></i>
-                                        </button>
-                                        <button id="new-sale-btn" class="btn btn-primary d-flex justify-content-between align-items-center">
-                                            <span>New Sale</span>
-                                            <i class="fas fa-plus"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    
-                    document.body.appendChild(successModal);
-                    
-                    // Initialize and show success modal
-                    const successModalInstance = new bootstrap.Modal(document.getElementById('success-modal'));
-                    successModalInstance.show();
-                    
-                    // Add event listeners for the buttons
-                    document.getElementById('view-receipt-btn').addEventListener('click', function() {
-                        successModalInstance.hide();
-                        // Show receipt modal
-                        const receiptModalInstance = new bootstrap.Modal(document.getElementById('receipt-modal'));
-                        receiptModalInstance.show();
-                    });
-                    
-                    document.getElementById('new-sale-btn').addEventListener('click', function() {
-                        // Reset cart and UI
-                        cart = [];
-                        updateCartUI();
-                        
-                        // Close success modal
-                        successModalInstance.hide();
-                        
-                        // Refresh product data to update inventory quantities
-                        refreshProductData();
-                    });
-                    
-                    // Refresh product data to update inventory quantities
-                    refreshProductData();
-                } else {
-                    alert('Error creating order: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while processing the order.');
-            });
-        });
-        
-        // Customer selection
-        customerButton.addEventListener('click', function() {
-            customerModal.show();
-        });
-        
-        customerList.forEach(customer => {
-            customer.addEventListener('click', function() {
-                customerList.forEach(c => c.classList.remove('active'));
-                this.classList.add('active');
-            });
-        });
-        
-        selectCustomerButton.addEventListener('click', function() {
-            const selectedCustomerElement = document.querySelector('#customer-list a.active');
-            
-            if (selectedCustomerElement) {
-                const customerId = selectedCustomerElement.getAttribute('data-id');
-                const customerName = selectedCustomerElement.textContent;
-                
-                if (customerId) {
-                    selectedCustomer = {
-                        id: customerId,
-                        name: customerName
+    $(document).ready(function() {
+        // Initialize Select2 for customer dropdown
+        $('#customer-select').select2({
+            placeholder: 'Search customer...',
+            allowClear: true,
+            ajax: {
+                url: '/pos/api/customers',
+                dataType: 'json',
+                delay: 250,
+                data: function(params) {
+                    return {
+                        search: params.term
                     };
-                    
-                    customerButton.innerHTML = `<i class="fas fa-user me-1"></i> ${customerName}`;
-                } else {
-                    selectedCustomer = null;
-                    customerButton.innerHTML = '<i class="fas fa-user"></i>';
-                }
+                },
+                processResults: function(data) {
+                    return {
+                        results: data.customers.map(customer => ({
+                            id: customer.id || '',
+                            text: customer.name,
+                            phone: customer.phone,
+                            email: customer.email
+                        }))
+                    };
+                },
+                cache: true
             }
+        }).on('select2:select', function(e) {
+            const data = e.params.data;
+            updateSelectedCustomerInfo(data);
+        }).on('select2:clear', function() {
+            hideSelectedCustomerInfo();
         });
-        
-        // Update cart UI
-        function updateCartUI() {
-            // Clear cart items - completely remove all children first
-            while (cartItems.firstChild) {
-                cartItems.removeChild(cartItems.firstChild);
-            }
-            
-            // Add empty cart message back if needed
-            if (cart.length === 0) {
-                cartItems.appendChild(emptyCartMessage);
-                emptyCartMessage.style.display = 'block';
-            } else {
-                emptyCartMessage.style.display = 'none';
-                
-                // Add cart items
-                cart.forEach((item, index) => {
-                    const cartItem = document.createElement('div');
-                    cartItem.className = 'cart-item';
-                    cartItem.innerHTML = `
-                        <div class="cart-item-details">
-                            <div class="cart-item-name">${item.name}</div>
-                            <div class="cart-item-price">${serverData.currency}${(item.price * item.quantity).toFixed(2)}</div>
-                        </div>
-                        <div class="cart-item-actions">
-                            <button class="btn-quantity decrease-btn" data-action="decrease" data-index="${index}">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <span class="quantity">${item.quantity}</span>
-                            <button class="btn-quantity increase-btn" data-action="increase" data-index="${index}">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                            <button class="btn-remove" data-index="${index}">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                    `;
-                    
-                    cartItems.appendChild(cartItem);
-                });
-                
-                // Add event listeners to cart item buttons - using event delegation for better performance
-                document.querySelectorAll('.increase-btn').forEach(button => {
-                    button.addEventListener('click', function() {
-                        try {
-                            const index = parseInt(this.getAttribute('data-index'));
-                            if (index < 0 || index >= cart.length) return;
-                            
-                            // Check stock before increasing
-                            const productId = cart[index].id;
-                            const productCard = document.querySelector(`.product-card[data-id="${productId}"]`);
-                            if (!productCard) {
-                                alert('Product information not found.');
-                                return;
-                            }
-                            const productStock = parseInt(productCard.getAttribute('data-stock'));
-                            
-                            if (cart[index].quantity >= productStock) {
-                                alert('Cannot add more of this product. Stock limit reached.');
-                                return;
-                            }
-                            
-                            cart[index].quantity += 1;
-                            updateCartUI();
-                        } catch (error) {
-                            console.error('Error increasing quantity:', error);
-                        }
-                    });
-                });
-                
-                document.querySelectorAll('.decrease-btn').forEach(button => {
-                    button.addEventListener('click', function() {
-                        try {
-                            const index = parseInt(this.getAttribute('data-index'));
-                            if (index < 0 || index >= cart.length) return;
-                            
-                            if (cart[index].quantity > 1) {
-                                cart[index].quantity -= 1;
-                            } else {
-                                cart.splice(index, 1);
-                            }
-                            updateCartUI();
-                        } catch (error) {
-                            console.error('Error decreasing quantity:', error);
-                        }
-                    });
-                });
-                
-                document.querySelectorAll('.btn-remove').forEach(button => {
-                    button.addEventListener('click', function() {
-                        try {
-                            const index = parseInt(this.getAttribute('data-index'));
-                            if (index >= 0 && index < cart.length) {
-                                cart.splice(index, 1);
-                                updateCartUI();
-                            }
-                        } catch (error) {
-                            console.error('Error removing item:', error);
-                        }
-                    });
-                });
-            }
-            
-            // Update totals
-            subtotalElement.textContent = `${serverData.currency}${calculateSubtotal().toFixed(2)}`;
-            taxElement.textContent = `${serverData.currency}${calculateTax().toFixed(2)}`;
-            totalElement.textContent = `${serverData.currency}${calculateFinalAmount().toFixed(2)}`;
-        }
-        
-        // Calculate subtotal
-        function calculateSubtotal() {
-            return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
-        }
-        
-        // Calculate tax
-        function calculateTax() {
-            return calculateSubtotal() * 0.1; // 10% tax
-        }
-        
-        // Calculate final amount due (considering exchange credit)
-        function calculateFinalAmount() {
-            const subtotal = calculateSubtotal();
-            const tax = calculateTax();
-            const total = subtotal + tax;
-            
-            // Update order total display if it exists
-            const orderTotalElement = document.getElementById('order-total');
-            if (orderTotalElement) {
-                orderTotalElement.textContent = `${serverData.currency}${total.toFixed(2)}`;
-            }
-            
-            // Apply exchange credit if available
-            if (exchangeReturnAmount > 0) {
-                return Math.max(0, total - exchangeReturnAmount);
-            }
-            
-            return total;
-        }
-        
-        // Function to refresh product data after a successful sale
-        function refreshProductData() {
-            fetch('/pos/api/products')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const products = data.products;
-                        
-                        // Update product cards with new quantities
-                        productCards.forEach(card => {
-                            const productId = parseInt(card.getAttribute('data-id'));
-                            const product = products.find(p => p.id === productId);
-                            
-                            if (product) {
-                                // Update the available quantity display
-                                const stockElement = card.querySelector('.product-stock');
-                                if (stockElement) {
-                                    stockElement.textContent = `Stock: ${product.available_quantity}`;
-                                }
-                                
-                                // Update the data attribute for available quantity
-                                card.setAttribute('data-stock', product.available_quantity);
-                                
-                                // Update the out-of-stock class based on new quantity
-                                if (product.available_quantity <= 0) {
-                                    card.classList.add('out-of-stock');
-                                } else {
-                                    card.classList.remove('out-of-stock');
-                                }
-                            }
-                        });
-                        
-                        console.log('Product inventory data refreshed successfully');
-                    } else {
-                        console.error('Failed to refresh product data');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error refreshing product data:', error);
-                });
-        }
-        
-        document.getElementById('new-sale-btn').addEventListener('click', function() {
-            successModalInstance.hide();
-            // Reset cart and UI
-            cart = [];
-            updateCartUI();
-            refreshProductData();
-        });
-        
-        document.getElementById('print-this-receipt').addEventListener('click', function() {
-            window.print();
-        });
-        
-        // Refresh product data to update inventory quantities
-        refreshProductData();
     });
+
+    function updateSelectedCustomerInfo(customer) {
+        const infoDiv = document.getElementById('selected-customer-info');
+        const phoneSpan = document.getElementById('customer-phone');
+        const emailSpan = document.getElementById('customer-email');
+
+        if (customer.id) {
+            phoneSpan.textContent = customer.phone ? `📱 ${customer.phone}` : '';
+            emailSpan.textContent = customer.email ? `📧 ${customer.email}` : '';
+            if (customer.phone || customer.email) {
+                infoDiv.classList.remove('d-none');
+            }
+        } else {
+            hideSelectedCustomerInfo();
+        }
+    }
+
+    function hideSelectedCustomerInfo() {
+        const infoDiv = document.getElementById('selected-customer-info');
+        infoDiv.classList.add('d-none');
+    }
+
+    function showNewCustomerModal() {
+        const modal = new bootstrap.Modal(document.getElementById('new-customer-modal'));
+        modal.show();
+    }
+
+    function createNewCustomer() {
+        const name = document.getElementById('customer-name').value.trim();
+        const phone = document.getElementById('customer-phone-input').value.trim();
+        const email = document.getElementById('customer-email-input').value.trim();
+        const notes = document.getElementById('customer-notes').value.trim();
+
+        if (!name) {
+            alert('Customer name is required');
+            return;
+        }
+
+        fetch('/pos/api/customers/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: name,
+                phone: phone,
+                email: email,
+                notes: notes
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Create a new option and append it to the select
+                const newOption = new Option(data.customer.name, data.customer.id, true, true);
+                $('#customer-select').append(newOption).trigger('change');
+                
+                // Update customer info display
+                updateSelectedCustomerInfo(data.customer);
+                
+                // Close the modal
+                bootstrap.Modal.getInstance(document.getElementById('new-customer-modal')).hide();
+                
+                // Clear the form
+                document.getElementById('new-customer-form').reset();
+                
+                // Show success message
+                alert('Customer created successfully');
+            } else {
+                alert('Error creating customer: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error creating customer. Please try again.');
+        });
+    }
 </script>
 {% endblock %}

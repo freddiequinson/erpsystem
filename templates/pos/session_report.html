@@ -55,22 +55,82 @@
     .payment-method-card {
         border-left: 4px solid #00cec9;
     }
-    .print-button {
-        margin-bottom: 20px;
+    
+    /* Button group styling */
+    .btn-group {
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-radius: 6px;
+    }
+    .btn-group .btn {
+        border: none;
+        padding: 8px 16px;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    .btn-group .btn:hover {
+        transform: translateY(-1px);
+    }
+    .btn-group .btn-primary {
+        background-color: #4a6cf7;
+    }
+    .btn-group .btn-primary:hover {
+        background-color: #3a5ce6;
+    }
+    .btn-group .btn-secondary {
+        background-color: #6c757d;
+    }
+    .btn-group .btn-secondary:hover {
+        background-color: #5a6268;
+    }
+    .btn-group .btn-light {
+        background-color: #f8f9fa;
+        color: #495057;
+    }
+    .btn-group .btn-light:hover {
+        background-color: #e9ecef;
+    }
+    
+    @media print {
+        .btn-group {
+            display: none !important;
+        }
+        .container {
+            padding: 0;
+            max-width: 100%;
+        }
+        .card {
+            break-inside: avoid;
+        }
+        .card-header {
+            background-color: #f5f5f5 !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        @page {
+            size: A4;
+            margin: 1cm;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="report-container">
+    <!-- Header with Title and Actions -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="fas fa-file-alt me-2"></i> Session Report</h2>
-        <div>
-            <button onclick="window.print();" class="btn btn-outline-secondary print-button">
-                <i class="fas fa-print me-2"></i> Print Report
+        <div class="d-flex align-items-center">
+            <h2 class="mb-0"><i class="fas fa-file-alt me-2"></i> Session Report</h2>
+        </div>
+        <div class="btn-group">
+            <a href="{{ url_for('pos.session_report', session_id=session.id, download='pdf') }}" class="btn btn-primary" target="_blank">
+                <i class="fas fa-download me-1"></i> Download PDF
+            </a>
+            <button onclick="window.print();" class="btn btn-secondary">
+                <i class="fas fa-print me-1"></i> Print
             </button>
-            <a href="{{ url_for('pos.sessions') }}" class="btn btn-outline-primary">
-                <i class="fas fa-arrow-left me-2"></i> Back to Sessions
+            <a href="{{ url_for('pos.sessions') }}" class="btn btn-light">
+                <i class="fas fa-arrow-left me-1"></i> Back
             </a>
         </div>
     </div>

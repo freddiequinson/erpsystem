@@ -17,7 +17,7 @@
             padding: 5mm;
             background-color: white;
         }
-        .header {
+        .receipt-header {
             text-align: center;
             margin-bottom: 5mm;
         }
@@ -25,12 +25,14 @@
             font-size: 16px;
             font-weight: bold;
         }
-        .info {
-            margin-bottom: 3mm;
+        .company-info {
+            font-size: 12px;
         }
-        .info div {
-            display: flex;
-            justify-content: space-between;
+        .receipt-details {
+            margin-top: 5mm;
+        }
+        .customer-details {
+            margin-top: 5mm;
         }
         .divider {
             border-top: 1px dashed #000;
@@ -116,19 +118,27 @@
 </head>
 <body>
     <div class="receipt">
-        <div class="header">
-            <div class="company-name">TYSONNE ELECTRONICS</div>
-            <div>123 Main Street, Accra, Ghana</div>
-            <div>Tel: +233 123 456 789</div>
-        </div>
-        
-        <div class="info">
-            <div><span>Receipt:</span> <span>{{ order.name }}</span></div>
-            <div><span>Date:</span> <span>{{ order.order_date.strftime('%Y-%m-%d %H:%M') }}</span></div>
-            <div><span>Cashier:</span> <span>{{ order.user.username if order.user else 'Unknown' }}</span></div>
-            {% if order.customer %}
-            <div><span>Customer:</span> <span>{{ order.customer.name }}</span></div>
-            {% endif %}
+        <div class="receipt-header">
+            <h2 class="company-name">{{ company_name }}</h2>
+            <p class="company-info">{{ company_address }}</p>
+            <p class="company-info">Tel: {{ company_phone }}</p>
+            <p class="company-info">{{ company_email }}</p>
+            
+            <div class="receipt-details">
+                <p><strong>Receipt #:</strong> {{ order.name }}</p>
+                <p><strong>Date:</strong> {{ order.order_date.strftime('%Y-%m-%d %H:%M') }}</p>
+                <p><strong>Cashier:</strong> {{ order.created_by_user.username }}</p>
+                {% if order.customer %}
+                <div class="customer-details">
+                    <p><strong>Customer:</strong> {{ order.customer.name }}</p>
+                    {% if order.customer.phone %}
+                    <p><strong>Phone:</strong> {{ order.customer.phone }}</p>
+                    {% endif %}
+                </div>
+                {% else %}
+                <p><strong>Customer:</strong> Walk-in Customer</p>
+                {% endif %}
+            </div>
         </div>
         
         <div class="divider"></div>

@@ -208,8 +208,31 @@
                         </div>
                         <div class="col-auto">
                             <button class="btn btn-sm btn-outline-danger" id="clear-cart-btn">
-                                <i class="fas fa-trash"></i> Clear
+                                <i class="fas fa-trash"></i>
                             </button>
+                        </div>
+                    </div>
+                    <!-- Customer Section -->
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label for="customer-select" class="form-label mb-0">Customer</label>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="showNewCustomerModal()">
+                                <i class="fas fa-plus"></i> New
+                            </button>
+                        </div>
+                        <select id="customer-select" class="form-select">
+                            <option value="" selected>Walk-in Customer</option>
+                            {% for customer in customers %}
+                            <option value="{{ customer.id }}" data-phone="{{ customer.phone }}" data-email="{{ customer.email }}">
+                                {{ customer.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div id="selected-customer-info" class="mt-2 small d-none">
+                            <div class="text-muted">
+                                <span id="customer-phone"></span>
+                                <span id="customer-email"></span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -356,6 +379,42 @@
                 <button type="button" class="btn btn-success" id="complete-payment">
                     <i class="fas fa-check me-2"></i> Complete Payment
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add New Customer Modal -->
+<div class="modal fade" id="newCustomerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">New Customer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="new-customer-form">
+                    <div class="mb-3">
+                        <label for="customer-name" class="form-label">Name *</label>
+                        <input type="text" class="form-control" id="customer-name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="customer-phone" class="form-label">Phone</label>
+                        <input type="tel" class="form-control" id="customer-phone-input">
+                    </div>
+                    <div class="mb-3">
+                        <label for="customer-email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="customer-email-input">
+                    </div>
+                    <div class="mb-3">
+                        <label for="customer-notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="customer-notes" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createNewCustomer()">Save</button>
             </div>
         </div>
     </div>
@@ -795,5 +854,115 @@
         // Initialize cart UI
         updateCartUI();
     });
+    
+    // Initialize Select2
+    $('#customer-select').select2({
+        theme: 'bootstrap-5',
+        placeholder: 'Search customer...',
+        allowClear: true
+    }).on('select2:select', function(e) {
+        const option = $(this).find('option:selected');
+        updateSelectedCustomerInfo({
+            id: option.val(),
+            phone: option.data('phone'),
+            email: option.data('email')
+        });
+    }).on('select2:clear', function() {
+        hideSelectedCustomerInfo();
+    });
+
+    // Customer info display functions
+    function updateSelectedCustomerInfo(customer) {
+        const infoDiv = document.getElementById('selected-customer-info');
+        const phoneSpan = document.getElementById('customer-phone');
+        const emailSpan = document.getElementById('customer-email');
+
+        if (customer.id) {
+            phoneSpan.textContent = customer.phone ? `📱 ${customer.phone}` : '';
+            emailSpan.textContent = customer.email ? `📧 ${customer.email}` : '';
+            if (customer.phone || customer.email) {
+                infoDiv.classList.remove('d-none');
+            }
+        } else {
+            hideSelectedCustomerInfo();
+        }
+    }
+
+    function hideSelectedCustomerInfo() {
+        const infoDiv = document.getElementById('selected-customer-info');
+        infoDiv.classList.add('d-none');
+    }
+
+    // Add these functions to your existing JavaScript
+    window.showNewCustomerModal = function() {
+        const modal = new bootstrap.Modal(document.getElementById('newCustomerModal'));
+        modal.show();
+    }
+
+    window.createNewCustomer = function() {
+        const name = document.getElementById('customer-name').value.trim();
+        const phone = document.getElementById('customer-phone-input').value.trim();
+        const email = document.getElementById('customer-email-input').value.trim();
+        const notes = document.getElementById('customer-notes').value.trim();
+
+        if (!name) {
+            alert('Customer name is required');
+            return;
+        }
+
+        fetch('/pos/api/customers/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: name,
+                phone: phone,
+                email: email,
+                notes: notes
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Create a new option and append it to the select
+                const newOption = new Option(data.customer.name, data.customer.id, true, true);
+                $(newOption).data('phone', data.customer.phone);
+                $(newOption).data('email', data.customer.email);
+                $('#customer-select').append(newOption).trigger('change');
+                
+                // Update customer info display
+                updateSelectedCustomerInfo(data.customer);
+                
+                // Close the modal
+                bootstrap.Modal.getInstance(document.getElementById('newCustomerModal')).hide();
+                
+                // Clear the form
+                document.getElementById('new-customer-form').reset();
+                
+                // Show success message
+                alert('Customer created successfully');
+            } else {
+                alert('Error creating customer: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error creating customer. Please try again.');
+        });
+    }
+
+    // Add customer data to the order creation
+    const originalCompletePayment = document.getElementById('complete-payment').onclick;
+    document.getElementById('complete-payment').onclick = function() {
+        // Add customer ID to the order data
+        const customerId = $('#customer-select').val();
+        if (customerId) {
+            orderData.customer_id = customerId;
+        }
+        
+        // Call the original complete payment function
+        originalCompletePayment();
+    };
 </script>
 {% endblock %}

@@ -1,5 +1,10 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, send_file, make_response
+from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from flask_login import login_required, current_user
+from app import db
+from datetime import datetime, date
+from sqlalchemy import func, desc
+from modules.inventory.models import Product, StockMove, StockLocation
+from modules.sales.models import Customer
 from extensions import db
 from modules.pos.models import POSSession, POSCashRegister, POSOrder, POSOrderLine, POSCategory, POSPaymentMethod, POSDiscount, POSTax, POSReceiptSettings, POSSettings, POSReturn, POSReturnLine, QualityCheck
 from modules.pos.forms import POSSessionForm, POSCashRegisterForm, POSCategoryForm, POSPaymentMethodForm, POSDiscountForm, POSTaxForm, POSReceiptSettingsForm, POSSettingsForm
@@ -291,6 +296,7 @@ def new_session():
     
     return render_template('pos/session_form.html', form=form, title='Open POS Session')
 
+
 @pos.route('/sessions/<int:session_id>/close', methods=['GET', 'POST'])
 @login_required
 def close_session(session_id):
@@ -326,7 +332,7 @@ def close_session(session_id):
             session.state = 'closed'
             session.end_time = datetime.utcnow()
             session.closing_balance = closing_balance
-            session.closing_notes = closing_notes
+            session.notes = closing_notes if not session.notes else session.notes + "\n" + closing_notes
             
             db.session.commit()
             
@@ -343,6 +349,7 @@ def close_session(session_id):
                           other_sales=other_sales,
                           datetime=datetime,
                           title='Close POS Session')
+
 
 # Orders page
 @pos.route('/orders')
@@ -758,11 +765,17 @@ def pos_settings():
 def api_products():
     """API endpoint to get products for POS terminal"""
     try:
+        # Force a fresh query to get the latest data
+        db.session.expire_all()
+        
         products = Product.query.filter_by(is_active=True).all()
         
         result = []
         
         for product in products:
+            # Ensure we get the latest available_quantity
+            db.session.refresh(product)
+            
             result.append({
                 'id': product.id,
                 'name': product.name,
@@ -949,10 +962,14 @@ def api_create_order():
         # Create stock moves for the order
         order.create_stock_moves()
         
+        # Explicitly refresh the database session to ensure latest data
+        db.session.expire_all()
+        
         # Refresh product objects to update available_quantity
         for product_data in data.get('items', []):
             product = Product.query.get(product_data.get('product_id'))
-            db.session.refresh(product)
+            if product:
+                db.session.refresh(product)
         
         return jsonify({
             'success': True, 
@@ -1008,7 +1025,7 @@ def session_report(session_id):
     category_totals = defaultdict(lambda: {'qty': 0, 'amount': 0})
     
     for line in order_lines:
-        category_name = line.product.category.name if line.product.category else "Uncategorized"
+        category_name = "Uncategorized" if not line.product else (line.product.category.name if line.product.category else "Uncategorized")
         
         # Add to category products
         product_exists = False
@@ -1030,7 +1047,7 @@ def session_report(session_id):
             sales_by_category[category_name].append(
                 ProductSummary(
                     line.product_id,
-                    line.product.name,
+                    line.product.name if line.product else "Unknown Product",
                     line.quantity,
                     line.quantity * line.unit_price
                 )
@@ -1067,8 +1084,30 @@ def session_report(session_id):
     # Get the sales worker information
     sales_worker = User.query.get(session.user_id)
     
+    # Check if it's a download request
+    if request.args.get('download') == 'pdf':
+        return render_template(
+            'pos/sales_report.html',
+            session=session,
+            report_date=report_date,
+            sales_by_category=sales_by_category,
+            category_totals=category_totals,
+            total_qty=total_qty,
+            total_amount=total_amount,
+            tax_rate=tax_rate,
+            tax_amount=tax_amount,
+            total_with_tax=total_with_tax,
+            payments=payments,
+            discounts_count=discounts_count,
+            discounts_amount=discounts_amount,
+            transactions_count=transactions_count,
+            sales_worker=sales_worker,
+            print_mode=True
+        )
+    
+    # Regular session report view
     return render_template(
-        'pos/sales_report.html',
+        'pos/session_report.html',
         session=session,
         report_date=report_date,
         sales_by_category=sales_by_category,
@@ -1078,11 +1117,12 @@ def session_report(session_id):
         tax_rate=tax_rate,
         tax_amount=tax_amount,
         total_with_tax=total_with_tax,
-        payments=payments,
+        payment_methods=payments,
         discounts_count=discounts_count,
         discounts_amount=discounts_amount,
-        transactions_count=transactions_count,
-        sales_worker=sales_worker
+        total_orders=transactions_count,
+        total_sales=total_with_tax,
+        orders=orders
     )
 
 # Download Sales Report as HTML (printable)
@@ -1117,7 +1157,7 @@ def download_session_report(session_id):
     category_totals = defaultdict(lambda: {'qty': 0, 'amount': 0})
     
     for line in order_lines:
-        category_name = line.product.category.name if line.product.category else "Uncategorized"
+        category_name = "Uncategorized" if not line.product else (line.product.category.name if line.product.category else "Uncategorized")
         
         # Add to category products
         product_exists = False
@@ -1139,7 +1179,7 @@ def download_session_report(session_id):
             sales_by_category[category_name].append(
                 ProductSummary(
                     line.product_id,
-                    line.product.name,
+                    line.product.name if line.product else "Unknown Product",
                     line.quantity,
                     line.quantity * line.unit_price
                 )
@@ -1178,7 +1218,7 @@ def download_session_report(session_id):
     
     # Render the template with print_mode=True
     html = render_template(
-        'pos/sales_report.html',
+        'pos/session_report.html',
         session=session,
         report_date=report_date,
         sales_by_category=sales_by_category,
@@ -1188,12 +1228,13 @@ def download_session_report(session_id):
         tax_rate=tax_rate,
         tax_amount=tax_amount,
         total_with_tax=total_with_tax,
-        payments=payments,
+        payment_methods=payments,
         discounts_count=discounts_count,
         discounts_amount=discounts_amount,
-        transactions_count=transactions_count,
-        print_mode=True,
-        sales_worker=sales_worker
+        total_orders=transactions_count,
+        total_sales=total_with_tax,
+        orders=orders,
+        print_mode=True
     )
     
     # Create a response with the HTML content
@@ -2183,8 +2224,7 @@ def employee_sales_detail(employee_id):
     elif period == 'year':
         from_date = today.replace(month=1, day=1)
         time_format = '%b'  # Month name
-    else:  # 'all'
-        time_format = '%b %Y'  # Month and year
+    # 'all' will leave from_date as None
     
     # Get the employee
     from modules.employees.models import Employee
@@ -2347,3 +2387,86 @@ def employee_sales_detail(employee_id):
         period=period,
         currency_symbol=currency_symbol
     )
+
+@pos.route('/api/customers')
+@login_required
+def api_customers():
+    """API endpoint to get customers for POS terminal"""
+    try:
+        # Get search term if provided
+        search = request.args.get('search', '')
+        
+        # Base query
+        query = Customer.query.filter_by(is_active=True)
+        
+        # Apply search if provided
+        if search:
+            search_term = f"%{search}%"
+            query = query.filter(
+                db.or_(
+                    Customer.name.ilike(search_term),
+                    Customer.phone.ilike(search_term),
+                    Customer.email.ilike(search_term)
+                )
+            )
+        
+        # Get customers
+        customers = query.order_by(Customer.name).all()
+        
+        # Add a "Walk-in Customer" option
+        result = [{
+            'id': None,
+            'name': 'Walk-in Customer',
+            'phone': '',
+            'email': ''
+        }]
+        
+        # Add actual customers
+        for customer in customers:
+            result.append({
+                'id': customer.id,
+                'name': customer.name,
+                'phone': customer.phone or '',
+                'email': customer.email or ''
+            })
+        
+        return jsonify({'success': True, 'customers': result})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@pos.route('/api/customers/create', methods=['POST'])
+@login_required
+def api_create_customer():
+    """API endpoint to create a new customer from POS terminal"""
+    try:
+        # Get JSON data from request
+        data = request.get_json()
+        
+        # Validate required fields
+        if not data.get('name'):
+            return jsonify({'success': False, 'message': 'Customer name is required'})
+        
+        # Create new customer
+        customer = Customer(
+            name=data.get('name'),
+            phone=data.get('phone', ''),
+            email=data.get('email', ''),
+            notes=data.get('notes', '')
+        )
+        
+        db.session.add(customer)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Customer created successfully',
+            'customer': {
+                'id': customer.id,
+                'name': customer.name,
+                'phone': customer.phone or '',
+                'email': customer.email or ''
+            }
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})

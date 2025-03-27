@@ -135,6 +135,9 @@ class POSOrder(db.Model):
         if not stock_location or not customer_location:
             return False
         
+        # Keep track of updated products
+        updated_products = []
+        
         for line in self.lines:
             product = Product.query.get(line.product_id)
             if not product:
@@ -143,8 +146,9 @@ class POSOrder(db.Model):
             if product.product_type == 'service':
                 continue
             
+            # Check available quantity - but don't block if negative stock is allowed
             if product.available_quantity < line.quantity:
-                raise ValueError(f"Insufficient quantity of product {product.name} available")
+                print(f"Warning: Selling more than available for product {product.name}. Available: {product.available_quantity}, Selling: {line.quantity}")
             
             stock_move = StockMove(
                 product_id=line.product_id,
@@ -157,8 +161,15 @@ class POSOrder(db.Model):
                 effective_date=self.order_date
             )
             db.session.add(stock_move)
+            updated_products.append(product)
         
+        # Commit the changes to ensure stock moves are saved
         db.session.commit()
+        
+        # Explicitly refresh product objects to update available_quantity
+        for product in updated_products:
+            db.session.refresh(product)
+        
         return True
 
 

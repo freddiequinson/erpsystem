@@ -43,3 +43,9 @@ media/
 
 # Fix scripts that shouldn't be in production
 fix_*.py
+create_*.py
+restore_*.py
+identify_*.py
+
+# Local development files
+local_*.py
