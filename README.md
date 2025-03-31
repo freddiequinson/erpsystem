@@ -30,7 +30,7 @@ A comprehensive ERP system inspired by Odoo Enterprise, designed to manage inven
 
 1. Create a PythonAnywhere account at [pythonanywhere.com](https://www.pythonanywhere.com)
 2. Open a Bash console in PythonAnywhere
-3. Clone the repository: `git clone https://github.com/yourusername/odoo-clone.git`
+3. Clone the repository: 
 4. Set up a virtual environment:
    ```
    cd odoo-clone
